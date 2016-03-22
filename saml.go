@@ -124,3 +124,35 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) e
 
 	return nil
 }
+
+type AssertionInfo struct {
+	FirstName    string
+	LastName     string
+	EmailAddress string
+}
+
+func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*AssertionInfo, error) {
+	raw, err := base64.StdEncoding.DecodeString(encodedResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	doc := etree.NewDocument()
+	err = doc.ReadFromBytes(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	assertionInfo, err := sp.validationContext().RetrieveAssertionInfo(doc.Root())
+	if err != nil {
+		return nil, err
+	}
+
+	ai := &AssertionInfo{
+		FirstName:    assertionInfo["FirstName"],
+		LastName:     assertionInfo["LastName"],
+		EmailAddress: assertionInfo["Email"],
+	}
+
+	return ai, nil
+}

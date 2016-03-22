@@ -2,6 +2,7 @@ package saml2
 
 import (
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"testing"
 
@@ -77,8 +78,15 @@ func TestSAML(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, cert)
 
+	randomKeyStore := dsig.RandomKeyStoreForTest()
+	_, _cert, err := randomKeyStore.GetKeyPair()
+
+	cert0, err := x509.ParseCertificate(_cert)
+	require.NoError(t, err)
+	require.NotEmpty(t, cert0)
+
 	certStore := dsig.MemoryX509CertificateStore{
-		Roots: []*x509.Certificate{cert},
+		Roots: []*x509.Certificate{cert, cert0},
 	}
 
 	sp := &SAMLServiceProvider{
@@ -87,8 +95,15 @@ func TestSAML(t *testing.T) {
 		AssertionConsumerServiceURL: "http://localhost:8080/v1/_saml_callback",
 		SignAuthnRequests:           true,
 		IDPCertificateStore:         &certStore,
-		SPKeyStore:                  dsig.RandomKeyStoreForTest(),
+		SPKeyStore:                  randomKeyStore,
 	}
+
+	authRequestString, err := sp.BuildAuthRequest()
+	require.NoError(t, err)
+
+	encodedAuthRequest := base64.StdEncoding.EncodeToString([]byte(authRequestString))
+	err = sp.ValidateEncodedResponse(encodedAuthRequest)
+	require.NoError(t, err)
 
 	err = sp.ValidateEncodedResponse(exampleBase64)
 	require.NoError(t, err)

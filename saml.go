@@ -129,6 +129,7 @@ type AssertionInfo struct {
 	FirstName    string
 	LastName     string
 	EmailAddress string
+	Login        string
 }
 
 func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*AssertionInfo, error) {
@@ -152,6 +153,7 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 		FirstName:    assertionInfo["FirstName"],
 		LastName:     assertionInfo["LastName"],
 		EmailAddress: assertionInfo["Email"],
+		Login:        assertionInfo["Login"],
 	}
 
 	return ai, nil

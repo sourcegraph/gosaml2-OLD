@@ -205,7 +205,7 @@ func TestSAML(t *testing.T) {
 		SPKeyStore:                  randomKeyStore,
 	}
 
-	authRequestURL, err := sp.BuildAuthURL("/teams/phoebe_test6/_signup/7ca0c334-6047-41eb-9e30-da39827c91f3/next_url?next_url='https://dev.sudo.wtf:8443/r/select-team'")
+	authRequestURL, err := sp.BuildAuthURL("/teams/phoebe_test/_signup/067c4b17-cecc-465e-badc-ac985f3c1833/next_url?next_url='https://dev.sudo.wtf:8443/r/select-team'")
 	require.NoError(t, err)
 	require.NotEmpty(t, authRequestURL)
 
@@ -227,10 +227,10 @@ func TestSAML(t *testing.T) {
 	assertionInfo, err := sp.RetrieveAssertionInfo(exampleBase64_2)
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
-	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.EmailAddress)
-	require.Equal(t, "Phoebe", assertionInfo.FirstName)
-	require.Equal(t, "Simon", assertionInfo.LastName)
-	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.Login)
+	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo["Email"])
+	require.Equal(t, "Phoebe", assertionInfo["FirstName"])
+	require.Equal(t, "Simon", assertionInfo["LastName"])
+	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo["Login"])
 
 	err = sp.ValidateEncodedResponse(base64.URLEncoding.EncodeToString([]byte(manInTheMiddledResponse)))
 	require.Error(t, err)

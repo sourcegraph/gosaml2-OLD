@@ -315,7 +315,7 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 		return nil, err
 	}
 
-	assertionElement := el.FindElement("//" + AssertionTag)
+	assertionElement := el.FindElement(AssertionTag)
 	if assertionElement == nil {
 		return nil, errors.New("Missing Assertion")
 	}

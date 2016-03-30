@@ -46,11 +46,7 @@ func TestSAML(t *testing.T) {
 
 	authRequestString, err := sp.BuildAuthRequest()
 	require.NoError(t, err)
-
-	encodedAuthRequest := base64.StdEncoding.EncodeToString([]byte(authRequestString))
-	// Verify that our signed auth request can be validated
-	err = sp.ValidateEncodedResponse(encodedAuthRequest)
-	require.NoError(t, err)
+	require.NotEmpty(t, authRequestString)
 
 	// Validate actual responses from Okta
 	err = sp.ValidateEncodedResponse(exampleBase64)
@@ -59,10 +55,13 @@ func TestSAML(t *testing.T) {
 	err = sp.ValidateEncodedResponse(exampleBase64_2)
 	require.NoError(t, err)
 
-	_, err = sp.RetrieveAssertionInfo(exampleBase64_2)
-	require.Error(t, err)
+	assertionInfo, err := sp.RetrieveAssertionInfo(exampleBase64_2)
+	require.NoError(t, err)
+	require.NotEmpty(t, assertionInfo)
+	require.NotEmpty(t, assertionInfo.WarningInfo)
+	require.True(t, assertionInfo.WarningInfo.InvalidTime)
 
-	assertionInfo, err := sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoModifiedAudienceResponse)))
+	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoModifiedAudienceResponse)))
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
 	require.True(t, assertionInfo.WarningInfo.NotInAudience)
@@ -109,5 +108,14 @@ func TestSAML(t *testing.T) {
 	require.Error(t, err)
 
 	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredSignedInfoResponse)))
+	require.Error(t, err)
+
+	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredRecipientResponse)))
+	require.Error(t, err)
+
+	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredDestinationResponse)))
+	require.Error(t, err)
+
+	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredSubjectConfirmationMethodResponse)))
 	require.Error(t, err)
 }

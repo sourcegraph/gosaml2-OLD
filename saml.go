@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/url"
 	"strconv"
 	"time"
@@ -108,6 +109,54 @@ func (sp *SAMLServiceProvider) BuildAuthURL(relayState string) (string, error) {
 	return parsedUrl.String(), nil
 }
 
+func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
+	el = el.Copy()
+
+	destinationAttr := el.SelectAttr(DestinationAttr)
+	if destinationAttr == nil {
+		return errors.New("Missing Destination attribute")
+	}
+	if destinationAttr.Value != sp.AssertionConsumerServiceURL {
+		return errors.New(fmt.Sprintf("Did not recognize Recipient value, Expected: %s, Actual: %s", sp.AssertionConsumerServiceURL, destinationAttr.Value))
+	}
+
+	assertionElement := el.FindElement("//" + AssertionTag)
+	if assertionElement == nil {
+		return errors.New("Missing Assertion element")
+	}
+
+	subjectStatement := assertionElement.FindElement(childPath(assertionElement.Space, SubjectTag))
+	if subjectStatement == nil {
+		return errors.New("Missing Subject")
+	}
+
+	subjectConfirmationStatement := subjectStatement.FindElement(childPath(assertionElement.Space, SubjectConfirmationTag))
+	if subjectConfirmationStatement == nil {
+		return errors.New("Missing SubjectConfirmation")
+	}
+
+	methodAttr := subjectConfirmationStatement.SelectAttr(MethodAttr)
+	if methodAttr.Value != "urn:oasis:names:tc:SAML:2.0:cm:bearer" {
+		return errors.New("Unsupported subject confirmation method")
+	}
+
+	subjectConfirmationDataStatement := subjectConfirmationStatement.FindElement(childPath(assertionElement.Space, SubjectConfirmationDataTag))
+	if subjectConfirmationDataStatement == nil {
+		return errors.New("Missing SubjectConfirmationData")
+	}
+
+	recipientAttr := subjectConfirmationDataStatement.SelectAttr(RecipientAttr)
+	if recipientAttr == nil {
+		return errors.New("Missing Recipient attribute")
+	}
+	if recipientAttr.Value != sp.AssertionConsumerServiceURL {
+		return errors.New(fmt.Sprintf("Did not recognize Recipient value, Expected: %s, Actual: %s", sp.AssertionConsumerServiceURL, recipientAttr.Value))
+	}
+
+	return nil
+
+}
+
 func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) error {
 	raw, err := base64.StdEncoding.DecodeString(encodedResponse)
 	if err != nil {
@@ -116,6 +165,11 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) e
 
 	doc := etree.NewDocument()
 	err = doc.ReadFromBytes(raw)
+	if err != nil {
+		return err
+	}
+
+	err = sp.Validate(doc.Root())
 	if err != nil {
 		return err
 	}
@@ -137,6 +191,7 @@ type warningInfo struct {
 	OneTimeUse       bool
 	ProxyRestriction *proxyRestriction
 	NotInAudience    bool
+	InvalidTime      bool
 }
 
 type AssertionInfo struct {
@@ -154,6 +209,29 @@ func childPath(space, tag string) string {
 
 func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertionElement, conditionsStatement *etree.Element) (*warningInfo, error) {
 	warningInfo := &warningInfo{}
+	now := time.Now()
+
+	notBeforeAttr := conditionsStatement.SelectAttr(NotBeforeAttr)
+	if notBeforeAttr != nil {
+		before, err := time.Parse(time.RFC3339, notBeforeAttr.Value)
+		if err != nil {
+			return nil, errors.New("Could not parse 'NotBefore' attribute")
+		}
+
+		if now.Before(before) {
+			warningInfo.InvalidTime = true
+		}
+	}
+	notOnOrAfterAttr := conditionsStatement.SelectAttr(NotOnOrAfterAttr)
+	if notOnOrAfterAttr != nil {
+		after, err := time.Parse(time.RFC3339, notOnOrAfterAttr.Value)
+		if err != nil {
+			return nil, errors.New("Could not parse 'NotOnOrAfter' attribute")
+		}
+		if now.After(after) {
+			warningInfo.InvalidTime = true
+		}
+	}
 
 	audienceRestrictionStatement := conditionsStatement.FindElement(childPath(assertionElement.Space, AudienceRestrictionTag))
 	if audienceRestrictionStatement != nil {
@@ -230,29 +308,6 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 	conditionsStatement := assertionElement.FindElement(childPath(assertionElement.Space, ConditionsTag))
 	if conditionsStatement == nil {
 		return nil, errors.New("Missing ConditionsStatement")
-	}
-	now := time.Now()
-
-	notBeforeAttr := conditionsStatement.SelectAttr(NotBeforeAttr)
-	if notBeforeAttr != nil {
-		before, err := time.Parse(time.RFC3339, notBeforeAttr.Value)
-		if err != nil {
-			return nil, errors.New("Could not parse 'NotBefore' attribute")
-		}
-
-		if now.Before(before) {
-			return nil, errors.New("Assertion statement is not valid yet")
-		}
-	}
-	notOnOrAfterAttr := conditionsStatement.SelectAttr(NotOnOrAfterAttr)
-	if notBeforeAttr != nil {
-		after, err := time.Parse(time.RFC3339, notOnOrAfterAttr.Value)
-		if err != nil {
-			return nil, errors.New("Could not parse 'NotOnOrAfter' attribute")
-		}
-		if now.After(after) {
-			return nil, errors.New("Assertion statement is no longer valid")
-		}
 	}
 
 	warningInfo, err := sp.VerifyAssertionConditions(assertionElement, conditionsStatement)

@@ -6,13 +6,34 @@ import (
 	"encoding/pem"
 	"testing"
 
+	"github.com/beevik/etree"
 	"github.com/russellhaering/goxmldsig"
 	"github.com/stretchr/testify/require"
 )
 
+func signResponse(t *testing.T, resp string, sp *SAMLServiceProvider) string {
+	doc := etree.NewDocument()
+	err := doc.ReadFromBytes([]byte(resp))
+	require.NoError(t, err)
+
+	el := doc.Root()
+
+	el, err = sp.signingContext().SignEnveloped(el)
+	require.NoError(t, err)
+
+	doc0 := etree.CreateDocument(el)
+	doc0.WriteSettings = etree.WriteSettings{
+		CanonicalAttrVal: true,
+		CanonicalEndTags: true,
+		CanonicalText:    true,
+	}
+
+	str, err := doc0.WriteToString()
+	require.NoError(t, err)
+	return str
+}
+
 func TestSAML(t *testing.T) {
-	// NOTE: These tests will probably start failing after 2026-02-09 21:53:06 +0000 UTC, hopefully this code lives long enough to see that happen
-	// You'll have to regenerate a base64 encoded response then
 	block, _ := pem.Decode([]byte(idpCertificate))
 	require.NotEmpty(t, block)
 	cert, err := x509.ParseCertificate(block.Bytes)
@@ -48,51 +69,69 @@ func TestSAML(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, authRequestString)
 
-	// Validate actual responses from Okta
-	err = sp.ValidateEncodedResponse(exampleBase64)
-	require.NoError(t, err)
+	// Note (Phoebe): The sample responses we acquired expired fairly quickly, meaning that our validation will fail
+	// because we check the expiration time;
+	// I've modified them to expire in ~100 years and removed their signatures, since those hash values are no longer
+	// valid. We have to re-sign them here before validating them
+	raw := signResponse(t, rawResponse, sp)
 
-	err = sp.ValidateEncodedResponse(exampleBase64_2)
+	el, err := sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(raw)))
 	require.NoError(t, err)
+	require.NotEmpty(t, el)
 
-	assertionInfo, err := sp.RetrieveAssertionInfo(exampleBase64_2)
+	assertionInfo, err := sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(raw)))
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
 	require.NotEmpty(t, assertionInfo.WarningInfo)
-	require.True(t, assertionInfo.WarningInfo.InvalidTime)
+	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.Values["Email"])
+	require.Equal(t, "Phoebe", assertionInfo.Values["FirstName"])
+	require.Equal(t, "Simon", assertionInfo.Values["LastName"])
+	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.Values["Login"])
 
-	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoModifiedAudienceResponse)))
+	assertionInfoModifiedAudience := signResponse(t, assertionInfoModifiedAudienceResponse, sp)
+
+	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoModifiedAudience)))
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
 	require.True(t, assertionInfo.WarningInfo.NotInAudience)
 
-	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoOneTimeUseResponse)))
+	assertionInfoOneTimeUse := signResponse(t, assertionInfoOneTimeUseResponse, sp)
+
+	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoOneTimeUse)))
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
 	require.True(t, assertionInfo.WarningInfo.OneTimeUse)
 
-	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoProxyRestrictionResponse)))
+	assertionInfoProxyRestriction := signResponse(t, assertionInfoProxyRestrictionResponse, sp)
+
+	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoProxyRestriction)))
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
 	require.NotEmpty(t, assertionInfo.WarningInfo.ProxyRestriction)
 	require.Equal(t, 3, assertionInfo.WarningInfo.ProxyRestriction.Count)
 	require.Equal(t, []string{"123"}, assertionInfo.WarningInfo.ProxyRestriction.Audience)
 
-	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoProxyRestrictionNoCountResponse)))
+	assertionInfoProxyRestrictionNoCount := signResponse(t, assertionInfoProxyRestrictionNoCountResponse, sp)
+
+	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoProxyRestrictionNoCount)))
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
 	require.NotEmpty(t, assertionInfo.WarningInfo.ProxyRestriction)
 	require.Equal(t, 0, assertionInfo.WarningInfo.ProxyRestriction.Count)
 	require.Equal(t, []string{"123"}, assertionInfo.WarningInfo.ProxyRestriction.Audience)
 
-	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoProxyRestrictionNoAudienceResponse)))
+	assertionInfoProxyRestrictionNoAudience := signResponse(t, assertionInfoProxyRestrictionNoAudienceResponse, sp)
+
+	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoProxyRestrictionNoAudience)))
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
 	require.NotEmpty(t, assertionInfo.WarningInfo.ProxyRestriction)
 	require.Equal(t, 3, assertionInfo.WarningInfo.ProxyRestriction.Count)
 	require.Equal(t, []string{}, assertionInfo.WarningInfo.ProxyRestriction.Audience)
 
-	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoResponse)))
+	assertionInfoResp := signResponse(t, assertionInfoResponse, sp)
+
+	assertionInfo, err = sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(assertionInfoResp)))
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
 	require.NotEmpty(t, assertionInfo.Values)
@@ -101,27 +140,35 @@ func TestSAML(t *testing.T) {
 	require.Equal(t, "Simon", assertionInfo.Values["LastName"])
 	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.Values["Login"])
 
-	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(manInTheMiddledResponse)))
+	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(manInTheMiddledResponse)))
 	require.Error(t, err)
+	require.Equal(t, "Signature could not be verified", err.Error())
 
-	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredReferenceURIResponse)))
+	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredReferenceURIResponse)))
 	require.Error(t, err)
+	require.Equal(t, "Could not verify certificate against trusted certs", err.Error())
 
-	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredSignedInfoResponse)))
+	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredSignedInfoResponse)))
 	require.Error(t, err)
+	require.Equal(t, "Could not verify certificate against trusted certs", err.Error())
 
-	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredRecipientResponse)))
+	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredRecipientResponse)))
 	require.Error(t, err)
+	require.Contains(t, err.Error(), "Did not recognize Recipient")
 
-	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredDestinationResponse)))
+	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredDestinationResponse)))
 	require.Error(t, err)
+	require.Contains(t, err.Error(), "Did not recognize Destination")
 
-	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredSubjectConfirmationMethodResponse)))
+	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredSubjectConfirmationMethodResponse)))
 	require.Error(t, err)
+	require.Equal(t, "Unsupported subject confirmation method", err.Error())
 
-	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredVersionResponse)))
+	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredVersionResponse)))
 	require.Error(t, err)
+	require.Equal(t, "Unsupported SAML version", err.Error())
 
-	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(missingIDResponse)))
+	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(missingIDResponse)))
 	require.Error(t, err)
+	require.Equal(t, "Missing ID attribute", err.Error())
 }

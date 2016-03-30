@@ -117,7 +117,7 @@ func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
 		return errors.New("Missing Destination attribute")
 	}
 	if destinationAttr.Value != sp.AssertionConsumerServiceURL {
-		return errors.New(fmt.Sprintf("Did not recognize Recipient value, Expected: %s, Actual: %s", sp.AssertionConsumerServiceURL, destinationAttr.Value))
+		return errors.New(fmt.Sprintf("Did not recognize Destination value, Expected: %s, Actual: %s", sp.AssertionConsumerServiceURL, destinationAttr.Value))
 	}
 
 	idAttr := el.SelectAttr(IdAttr)
@@ -169,33 +169,39 @@ func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
 		return errors.New(fmt.Sprintf("Did not recognize Recipient value, Expected: %s, Actual: %s", sp.AssertionConsumerServiceURL, recipientAttr.Value))
 	}
 
+	notOnOrAfterAttr := subjectConfirmationDataStatement.SelectAttr(NotOnOrAfterAttr)
+	if notOnOrAfterAttr != nil {
+		after, err := time.Parse(time.RFC3339, notOnOrAfterAttr.Value)
+		if err != nil {
+			return errors.New("Could not parse 'NotOnOrAfter' attribute")
+		}
+		if time.Now().After(after) {
+			return errors.New("SubjectConfirmationData is no longer valid")
+		}
+	}
+
 	return nil
 
 }
 
-func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) error {
+func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (*etree.Element, error) {
 	raw, err := base64.StdEncoding.DecodeString(encodedResponse)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	doc := etree.NewDocument()
 	err = doc.ReadFromBytes(raw)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = sp.Validate(doc.Root())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = sp.validationContext().Validate(doc.Root())
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return sp.validationContext().Validate(doc.Root())
 }
 
 type proxyRestriction struct {
@@ -300,20 +306,12 @@ func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertionElement, condi
 }
 
 func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*AssertionInfo, error) {
-	raw, err := base64.StdEncoding.DecodeString(encodedResponse)
-	if err != nil {
-		return nil, err
-	}
-
 	assertionInfo := &AssertionInfo{}
 
-	doc := etree.NewDocument()
-	err = doc.ReadFromBytes(raw)
+	el, err := sp.ValidateEncodedResponse(encodedResponse)
 	if err != nil {
 		return nil, err
 	}
-
-	el := doc.Root()
 
 	assertionElement := el.FindElement("//" + AssertionTag)
 	if assertionElement == nil {

@@ -152,19 +152,23 @@ func TestSAML(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, "Could not verify certificate against trusted certs", err.Error())
 
-	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredRecipientResponse)))
+	alteredRecipient := signResponse(t, alteredRecipientResponse, sp)
+	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredRecipient)))
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "Did not recognize Recipient")
 
-	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredDestinationResponse)))
+	alteredDestination := signResponse(t, alteredDestinationResponse, sp)
+	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredDestination)))
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "Did not recognize Destination")
 
-	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredSubjectConfirmationMethodResponse)))
+	alteredSubjectConfirmationMethod := signResponse(t, alteredSubjectConfirmationMethodResponse, sp)
+	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredSubjectConfirmationMethod)))
 	require.Error(t, err)
 	require.Equal(t, "Unsupported subject confirmation method", err.Error())
 
-	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredVersionResponse)))
+	alteredVersion := signResponse(t, alteredVersionResponse, sp)
+	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredVersion)))
 	require.Error(t, err)
 	require.Equal(t, "Unsupported SAML version", err.Error())
 

@@ -121,10 +121,7 @@ func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
 	}
 
 	idAttr := el.SelectAttr(IdAttr)
-	if idAttr == nil {
-		return errors.New("Missing ID attribute")
-	}
-	if idAttr.Value == "" {
+	if idAttr == nil || idAttr.Value == "" {
 		return errors.New("Missing ID attribute")
 	}
 
@@ -136,7 +133,7 @@ func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
 		return errors.New("Unsupported SAML version")
 	}
 
-	assertionElement := el.FindElement("//" + AssertionTag)
+	assertionElement := el.FindElement(AssertionTag)
 	if assertionElement == nil {
 		return errors.New("Missing Assertion element")
 	}
@@ -196,12 +193,17 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		return nil, err
 	}
 
-	err = sp.Validate(doc.Root())
+	response, err := sp.validationContext().Validate(doc.Root())
 	if err != nil {
 		return nil, err
 	}
 
-	return sp.validationContext().Validate(doc.Root())
+	err = sp.Validate(response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
 
 type proxyRestriction struct {

@@ -26,7 +26,7 @@ type SAMLServiceProvider struct {
 	SPKeyStore                  dsig.X509KeyStore
 }
 
-func (sp *SAMLServiceProvider) signingContext() *dsig.SigningContext {
+func (sp *SAMLServiceProvider) SigningContext() *dsig.SigningContext {
 	return dsig.NewDefaultSigningContext(sp.SPKeyStore)
 }
 
@@ -66,7 +66,7 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 	var doc *etree.Document
 
 	if sp.SignAuthnRequests {
-		signed, err := sp.signingContext().SignEnveloped(authnRequest)
+		signed, err := sp.SigningContext().SignEnveloped(authnRequest)
 		if err != nil {
 			return "", err
 		}

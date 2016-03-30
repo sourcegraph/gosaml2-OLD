@@ -18,7 +18,7 @@ func signResponse(t *testing.T, resp string, sp *SAMLServiceProvider) string {
 
 	el := doc.Root()
 
-	el, err = sp.signingContext().SignEnveloped(el)
+	el, err = sp.SigningContext().SignEnveloped(el)
 	require.NoError(t, err)
 
 	doc0 := etree.CreateDocument(el)

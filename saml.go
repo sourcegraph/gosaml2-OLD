@@ -206,21 +206,21 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 	return response, nil
 }
 
-type proxyRestriction struct {
+type ProxyRestriction struct {
 	Count    int
 	Audience []string
 }
 
-type warningInfo struct {
+type WarningInfo struct {
 	OneTimeUse       bool
-	ProxyRestriction *proxyRestriction
+	ProxyRestriction *ProxyRestriction
 	NotInAudience    bool
 	InvalidTime      bool
 }
 
 type AssertionInfo struct {
 	Values      map[string]string
-	WarningInfo *warningInfo
+	WarningInfo *WarningInfo
 }
 
 func childPath(space, tag string) string {
@@ -231,8 +231,8 @@ func childPath(space, tag string) string {
 	}
 }
 
-func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertionElement, conditionsStatement *etree.Element) (*warningInfo, error) {
-	warningInfo := &warningInfo{}
+func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertionElement, conditionsStatement *etree.Element) (*WarningInfo, error) {
+	warningInfo := &WarningInfo{}
 	now := time.Now()
 
 	notBeforeAttr := conditionsStatement.SelectAttr(NotBeforeAttr)
@@ -283,7 +283,7 @@ func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertionElement, condi
 
 	proxyRestrictionStatement := conditionsStatement.FindElement(childPath(assertionElement.Space, ProxyRestrictionTag))
 	if proxyRestrictionStatement != nil {
-		proxyRestrictionInfo := &proxyRestriction{}
+		proxyRestrictionInfo := &ProxyRestriction{}
 		countAttr := proxyRestrictionStatement.SelectAttr(CountAttr)
 		if countAttr != nil {
 			count, err := strconv.Atoi(countAttr.Value)

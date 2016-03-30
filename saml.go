@@ -120,6 +120,22 @@ func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
 		return errors.New(fmt.Sprintf("Did not recognize Recipient value, Expected: %s, Actual: %s", sp.AssertionConsumerServiceURL, destinationAttr.Value))
 	}
 
+	idAttr := el.SelectAttr(IdAttr)
+	if idAttr == nil {
+		return errors.New("Missing ID attribute")
+	}
+	if idAttr.Value == "" {
+		return errors.New("Missing ID attribute")
+	}
+
+	versionAttr := el.SelectAttr(VersionAttr)
+	if versionAttr == nil {
+		return errors.New("Missing Version attribute")
+	}
+	if versionAttr.Value != "2.0" {
+		return errors.New("Unsupported SAML version")
+	}
+
 	assertionElement := el.FindElement("//" + AssertionTag)
 	if assertionElement == nil {
 		return errors.New("Missing Assertion element")

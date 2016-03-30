@@ -118,4 +118,10 @@ func TestSAML(t *testing.T) {
 
 	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredSubjectConfirmationMethodResponse)))
 	require.Error(t, err)
+
+	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredVersionResponse)))
+	require.Error(t, err)
+
+	err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(missingIDResponse)))
+	require.Error(t, err)
 }

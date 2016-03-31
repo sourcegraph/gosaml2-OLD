@@ -3,7 +3,10 @@ package saml2
 import (
 	"bytes"
 	"encoding/base64"
+	"errors"
+	"fmt"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/beevik/etree"
@@ -18,11 +21,12 @@ type SAMLServiceProvider struct {
 	IdentityProviderIssuer      string
 	AssertionConsumerServiceURL string
 	SignAuthnRequests           bool
+	AudienceURI                 string
 	IDPCertificateStore         dsig.X509CertificateStore
 	SPKeyStore                  dsig.X509KeyStore
 }
 
-func (sp *SAMLServiceProvider) signingContext() *dsig.SigningContext {
+func (sp *SAMLServiceProvider) SigningContext() *dsig.SigningContext {
 	return dsig.NewDefaultSigningContext(sp.SPKeyStore)
 }
 
@@ -62,7 +66,7 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 	var doc *etree.Document
 
 	if sp.SignAuthnRequests {
-		signed, err := sp.signingContext().SignEnveloped(authnRequest)
+		signed, err := sp.SigningContext().SignEnveloped(authnRequest)
 		if err != nil {
 			return "", err
 		}
@@ -105,22 +109,245 @@ func (sp *SAMLServiceProvider) BuildAuthURL(relayState string) (string, error) {
 	return parsedUrl.String(), nil
 }
 
-func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) error {
+func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
+	el = el.Copy()
+
+	destinationAttr := el.SelectAttr(DestinationAttr)
+	if destinationAttr == nil {
+		return errors.New("Missing Destination attribute")
+	}
+	if destinationAttr.Value != sp.AssertionConsumerServiceURL {
+		return errors.New(fmt.Sprintf("Did not recognize Destination value, Expected: %s, Actual: %s", sp.AssertionConsumerServiceURL, destinationAttr.Value))
+	}
+
+	idAttr := el.SelectAttr(IdAttr)
+	if idAttr == nil || idAttr.Value == "" {
+		return errors.New("Missing ID attribute")
+	}
+
+	versionAttr := el.SelectAttr(VersionAttr)
+	if versionAttr == nil {
+		return errors.New("Missing Version attribute")
+	}
+	if versionAttr.Value != "2.0" {
+		return errors.New("Unsupported SAML version")
+	}
+
+	assertionElement := el.FindElement(AssertionTag)
+	if assertionElement == nil {
+		return errors.New("Missing Assertion element")
+	}
+
+	subjectStatement := assertionElement.FindElement(childPath(assertionElement.Space, SubjectTag))
+	if subjectStatement == nil {
+		return errors.New("Missing Subject")
+	}
+
+	subjectConfirmationStatement := subjectStatement.FindElement(childPath(assertionElement.Space, SubjectConfirmationTag))
+	if subjectConfirmationStatement == nil {
+		return errors.New("Missing SubjectConfirmation")
+	}
+
+	methodAttr := subjectConfirmationStatement.SelectAttr(MethodAttr)
+	if methodAttr.Value != "urn:oasis:names:tc:SAML:2.0:cm:bearer" {
+		return errors.New("Unsupported subject confirmation method")
+	}
+
+	subjectConfirmationDataStatement := subjectConfirmationStatement.FindElement(childPath(assertionElement.Space, SubjectConfirmationDataTag))
+	if subjectConfirmationDataStatement == nil {
+		return errors.New("Missing SubjectConfirmationData")
+	}
+
+	recipientAttr := subjectConfirmationDataStatement.SelectAttr(RecipientAttr)
+	if recipientAttr == nil {
+		return errors.New("Missing Recipient attribute")
+	}
+	if recipientAttr.Value != sp.AssertionConsumerServiceURL {
+		return errors.New(fmt.Sprintf("Did not recognize Recipient value, Expected: %s, Actual: %s", sp.AssertionConsumerServiceURL, recipientAttr.Value))
+	}
+
+	notOnOrAfterAttr := subjectConfirmationDataStatement.SelectAttr(NotOnOrAfterAttr)
+	if notOnOrAfterAttr != nil {
+		after, err := time.Parse(time.RFC3339, notOnOrAfterAttr.Value)
+		if err != nil {
+			return errors.New("Could not parse 'NotOnOrAfter' attribute")
+		}
+		if time.Now().After(after) {
+			return errors.New("SubjectConfirmationData is no longer valid")
+		}
+	}
+
+	return nil
+
+}
+
+func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (*etree.Element, error) {
 	raw, err := base64.StdEncoding.DecodeString(encodedResponse)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	doc := etree.NewDocument()
 	err = doc.ReadFromBytes(raw)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = sp.validationContext().Validate(doc.Root())
+	response, err := sp.validationContext().Validate(doc.Root())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	err = sp.Validate(response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+type ProxyRestriction struct {
+	Count    int
+	Audience []string
+}
+
+type WarningInfo struct {
+	OneTimeUse       bool
+	ProxyRestriction *ProxyRestriction
+	NotInAudience    bool
+	InvalidTime      bool
+}
+
+type AssertionInfo struct {
+	Values      map[string]string
+	WarningInfo *WarningInfo
+}
+
+func childPath(space, tag string) string {
+	if space == "" {
+		return "./" + tag
+	} else {
+		return "./" + space + ":" + tag
+	}
+}
+
+func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertionElement, conditionsStatement *etree.Element) (*WarningInfo, error) {
+	warningInfo := &WarningInfo{}
+	now := time.Now()
+
+	notBeforeAttr := conditionsStatement.SelectAttr(NotBeforeAttr)
+	if notBeforeAttr != nil {
+		before, err := time.Parse(time.RFC3339, notBeforeAttr.Value)
+		if err != nil {
+			return nil, errors.New("Could not parse 'NotBefore' attribute")
+		}
+
+		if now.Before(before) {
+			warningInfo.InvalidTime = true
+		}
+	}
+	notOnOrAfterAttr := conditionsStatement.SelectAttr(NotOnOrAfterAttr)
+	if notOnOrAfterAttr != nil {
+		after, err := time.Parse(time.RFC3339, notOnOrAfterAttr.Value)
+		if err != nil {
+			return nil, errors.New("Could not parse 'NotOnOrAfter' attribute")
+		}
+		if now.After(after) {
+			warningInfo.InvalidTime = true
+		}
+	}
+
+	audienceRestrictionStatement := conditionsStatement.FindElement(childPath(assertionElement.Space, AudienceRestrictionTag))
+	if audienceRestrictionStatement != nil {
+		audienceStatements := audienceRestrictionStatement.FindElements(childPath(assertionElement.Space, AudienceTag))
+		if len(audienceStatements) == 0 {
+			return nil, errors.New("Missing AudienceStatement")
+		}
+
+		matched := false
+		for _, audienceStatement := range audienceStatements {
+			if audienceStatement.Text() == sp.AudienceURI {
+				matched = true
+			}
+		}
+
+		if !matched {
+			warningInfo.NotInAudience = true
+		}
+	}
+
+	oneTimeUseStatement := conditionsStatement.FindElement(childPath(assertionElement.Space, OneTimeUseTag))
+	if oneTimeUseStatement != nil {
+		warningInfo.OneTimeUse = true
+	}
+
+	proxyRestrictionStatement := conditionsStatement.FindElement(childPath(assertionElement.Space, ProxyRestrictionTag))
+	if proxyRestrictionStatement != nil {
+		proxyRestrictionInfo := &ProxyRestriction{}
+		countAttr := proxyRestrictionStatement.SelectAttr(CountAttr)
+		if countAttr != nil {
+			count, err := strconv.Atoi(countAttr.Value)
+			if err != nil {
+				return nil, errors.New("Could not parse Count attribute")
+			}
+
+			proxyRestrictionInfo.Count = count
+		}
+
+		proxyAudienceStatements := proxyRestrictionStatement.FindElements(childPath(assertionElement.Space, AudienceTag))
+		pas := make([]string, len(proxyAudienceStatements))
+		for i, proxyAudienceStatement := range proxyAudienceStatements {
+			pas[i] = proxyAudienceStatement.Text()
+		}
+
+		proxyRestrictionInfo.Audience = pas
+		warningInfo.ProxyRestriction = proxyRestrictionInfo
+	}
+
+	return warningInfo, nil
+}
+
+func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*AssertionInfo, error) {
+	assertionInfo := &AssertionInfo{}
+
+	el, err := sp.ValidateEncodedResponse(encodedResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	assertionElement := el.FindElement(AssertionTag)
+	if assertionElement == nil {
+		return nil, errors.New("Missing Assertion")
+	}
+
+	//Verify all conditions for the assertion
+	conditionsStatement := assertionElement.FindElement(childPath(assertionElement.Space, ConditionsTag))
+	if conditionsStatement == nil {
+		return nil, errors.New("Missing ConditionsStatement")
+	}
+
+	warningInfo, err := sp.VerifyAssertionConditions(assertionElement, conditionsStatement)
+	if err != nil {
+		return nil, err
+	}
+
+	//Get the actual assertion attributes
+	attributeStatement := assertionElement.FindElement(childPath(assertionElement.Space, AttributeStatementTag))
+	if attributeStatement == nil {
+		return nil, errors.New("Missing AttributeStatement")
+	}
+
+	info := make(map[string]string)
+	for _, child := range attributeStatement.ChildElements() {
+		nameAttr := child.SelectAttr(NameAttr)
+		attributeValue := child.FindElement(childPath(child.Space, AttributeValueTag))
+		if attributeValue == nil {
+			return nil, errors.New("Missing AttributeValue")
+		}
+		info[nameAttr.Value] = attributeValue.Text()
+	}
+
+	assertionInfo.Values = info
+	assertionInfo.WarningInfo = warningInfo
+	return assertionInfo, nil
 }

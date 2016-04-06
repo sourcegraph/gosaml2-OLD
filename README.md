@@ -13,7 +13,7 @@ $ go get github.com/russellhaering/gosaml2`
 
 ## Example
 
-See [example.go](s2example/example.go).
+See [demo.go](s2example/demo.go).
 
 ## Supported Identity Providers
 

@@ -1,6 +1,7 @@
 # gosaml2
 
-SAML 2.0 implemementation based on `etree` and `goxmldsig`, a pure Go
+SAML 2.0 implemementation based on [etree](https://github.com/beevik/etree)
+and [goxmldsig](https://github.com/russellhaering/goxmldsig), a pure Go
 implementation of XML digital signatures.
 
 ## Installation

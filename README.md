@@ -1,5 +1,7 @@
 # gosaml2
 
+[![GoDoc](https://godoc.org/github.com/russellhaering/gosaml2?status.svg)](https://godoc.org/github.com/russellhaering/gosaml2)
+
 SAML 2.0 implemementation based on [etree](https://github.com/beevik/etree)
 and [goxmldsig](https://github.com/russellhaering/goxmldsig), a pure Go
 implementation of XML digital signatures.

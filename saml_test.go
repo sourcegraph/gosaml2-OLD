@@ -21,7 +21,8 @@ func signResponse(t *testing.T, resp string, sp *SAMLServiceProvider) string {
 	el, err = sp.SigningContext().SignEnveloped(el)
 	require.NoError(t, err)
 
-	doc0 := etree.CreateDocument(el)
+	doc0 := etree.NewDocument()
+	doc0.SetRoot(el)
 	doc0.WriteSettings = etree.WriteSettings{
 		CanonicalAttrVal: true,
 		CanonicalEndTags: true,

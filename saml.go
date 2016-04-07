@@ -63,7 +63,7 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 	authnContextClassRef := requestedAuthnContext.CreateElement("saml:AuthnContextClassRef")
 	authnContextClassRef.SetText("urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport")
 
-	var doc *etree.Document
+	doc := etree.NewDocument()
 
 	if sp.SignAuthnRequests {
 		signed, err := sp.SigningContext().SignEnveloped(authnRequest)
@@ -71,9 +71,9 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 			return "", err
 		}
 
-		doc = etree.CreateDocument(signed)
+		doc.SetRoot(signed)
 	} else {
-		doc = etree.CreateDocument(authnRequest)
+		doc.SetRoot(authnRequest)
 	}
 
 	buf := &bytes.Buffer{}

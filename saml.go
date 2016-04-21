@@ -24,6 +24,7 @@ type SAMLServiceProvider struct {
 	AudienceURI                 string
 	IDPCertificateStore         dsig.X509CertificateStore
 	SPKeyStore                  dsig.X509KeyStore
+	NameIdFormat                string
 }
 
 func (sp *SAMLServiceProvider) SigningContext() *dsig.SigningContext {
@@ -55,7 +56,7 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 
 	nameIdPolicy := authnRequest.CreateElement("samlp:NameIDPolicy")
 	nameIdPolicy.CreateAttr("AllowCreate", "true")
-	nameIdPolicy.CreateAttr("Format", "urn:oasis:names:tc:SAML:2.0:nameid-format:transient")
+	nameIdPolicy.CreateAttr("Format", sp.NameIdFormat)
 
 	requestedAuthnContext := authnRequest.CreateElement("samlp:RequestedAuthnContext")
 	requestedAuthnContext.CreateAttr("Comparison", "exact")

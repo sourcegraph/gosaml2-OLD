@@ -60,6 +60,7 @@ func TestSAML(t *testing.T) {
 		AudienceURI:                 "123",
 		IDPCertificateStore:         &certStore,
 		SPKeyStore:                  randomKeyStore,
+		NameIdFormat:                Persistent,
 	}
 
 	authRequestURL, err := sp.BuildAuthURL("/some/link/here")

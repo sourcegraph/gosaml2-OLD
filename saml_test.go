@@ -60,6 +60,7 @@ func TestSAML(t *testing.T) {
 		AudienceURI:                 "123",
 		IDPCertificateStore:         &certStore,
 		SPKeyStore:                  randomKeyStore,
+		NameIdFormat:                NameIdFormatPersistent,
 	}
 
 	authRequestURL, err := sp.BuildAuthURL("/some/link/here")
@@ -84,10 +85,11 @@ func TestSAML(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
 	require.NotEmpty(t, assertionInfo.WarningInfo)
+	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.NameID)
 	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.Values["Email"])
 	require.Equal(t, "Phoebe", assertionInfo.Values["FirstName"])
 	require.Equal(t, "Simon", assertionInfo.Values["LastName"])
-	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.Values["Login"])
+	require.Equal(t, "phoebesimon", assertionInfo.Values["Login"])
 
 	assertionInfoModifiedAudience := signResponse(t, assertionInfoModifiedAudienceResponse, sp)
 

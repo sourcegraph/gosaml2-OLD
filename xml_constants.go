@@ -4,6 +4,7 @@ const (
 	ResponseTag                = "Response"
 	AssertionTag               = "Assertion"
 	SubjectTag                 = "Subject"
+	NameIdTag                  = "NameID"
 	SubjectConfirmationTag     = "SubjectConfirmation"
 	SubjectConfirmationDataTag = "SubjectConfirmationData"
 	AttributeStatementTag      = "AttributeStatement"
@@ -25,4 +26,12 @@ const (
 	NotBeforeAttr    = "NotBefore"
 	NotOnOrAfterAttr = "NotOnOrAfter"
 	CountAttr        = "Count"
+)
+
+const (
+	NameIdFormatPersistent      = "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"
+	NameIdFormatTransient       = "urn:oasis:names:tc:SAML:2.0:nameid-format:transient"
+	NameIdFormatEmailAddress    = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
+	NameIdFormatUnspecified     = "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
+	NameIdFormatX509SubjectName = "urn:oasis:names:tc:SAML:1.1:nameid-format:x509SubjectName"
 )

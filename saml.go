@@ -24,6 +24,7 @@ type SAMLServiceProvider struct {
 	AudienceURI                 string
 	IDPCertificateStore         dsig.X509CertificateStore
 	SPKeyStore                  dsig.X509KeyStore
+	NameIdFormat                string
 }
 
 func (sp *SAMLServiceProvider) SigningContext() *dsig.SigningContext {
@@ -55,7 +56,7 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 
 	nameIdPolicy := authnRequest.CreateElement("samlp:NameIDPolicy")
 	nameIdPolicy.CreateAttr("AllowCreate", "true")
-	nameIdPolicy.CreateAttr("Format", "urn:oasis:names:tc:SAML:2.0:nameid-format:transient")
+	nameIdPolicy.CreateAttr("Format", sp.NameIdFormat)
 
 	requestedAuthnContext := authnRequest.CreateElement("samlp:RequestedAuthnContext")
 	requestedAuthnContext.CreateAttr("Comparison", "exact")
@@ -219,6 +220,7 @@ type WarningInfo struct {
 }
 
 type AssertionInfo struct {
+	NameID      string
 	Values      map[string]string
 	WarningInfo *WarningInfo
 }
@@ -330,6 +332,18 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 	if err != nil {
 		return nil, err
 	}
+
+	//Get the NameID
+	subjectStatement := assertionElement.FindElement(childPath(assertionElement.Space, SubjectTag))
+	if subjectStatement == nil {
+		return nil, errors.New("Missing SubjectStatement")
+	}
+
+	nameIdStatement := subjectStatement.FindElement(childPath(assertionElement.Space, NameIdTag))
+	if nameIdStatement == nil {
+		return nil, errors.New("Missing NameIDStatement")
+	}
+	assertionInfo.NameID = nameIdStatement.Text()
 
 	//Get the actual assertion attributes
 	attributeStatement := assertionElement.FindElement(childPath(assertionElement.Space, AttributeStatementTag))

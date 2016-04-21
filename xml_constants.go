@@ -29,9 +29,9 @@ const (
 )
 
 const (
-	Persistent      = "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"
-	Transient       = "urn:oasis:names:tc:SAML:2.0:nameid-format:transient"
-	EmailAddress    = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
-	Unspecified     = "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
-	X509SubjectName = "urn:oasis:names:tc:SAML:1.1:nameid-format:x509SubjectName"
+	NameIdFormatPersistent      = "urn:oasis:names:tc:SAML:2.0:nameid-format:persistent"
+	NameIdFormatTransient       = "urn:oasis:names:tc:SAML:2.0:nameid-format:transient"
+	NameIdFormatEmailAddress    = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
+	NameIdFormatUnspecified     = "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
+	NameIdFormatX509SubjectName = "urn:oasis:names:tc:SAML:1.1:nameid-format:x509SubjectName"
 )

@@ -84,7 +84,7 @@ func TestSAML(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
 	require.NotEmpty(t, assertionInfo.WarningInfo)
-	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.UserName)
+	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.NameID)
 	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.Values["Email"])
 	require.Equal(t, "Phoebe", assertionInfo.Values["FirstName"])
 	require.Equal(t, "Simon", assertionInfo.Values["LastName"])

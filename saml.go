@@ -219,7 +219,7 @@ type WarningInfo struct {
 }
 
 type AssertionInfo struct {
-	UserName    string
+	NameID      string
 	Values      map[string]string
 	WarningInfo *WarningInfo
 }
@@ -342,7 +342,7 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 	if nameIdStatement == nil {
 		return nil, errors.New("Missing NameIDStatement")
 	}
-	assertionInfo.UserName = nameIdStatement.Text()
+	assertionInfo.NameID = nameIdStatement.Text()
 
 	//Get the actual assertion attributes
 	attributeStatement := assertionElement.FindElement(childPath(assertionElement.Space, AttributeStatementTag))

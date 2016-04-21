@@ -4,6 +4,7 @@ const (
 	ResponseTag                = "Response"
 	AssertionTag               = "Assertion"
 	SubjectTag                 = "Subject"
+	NameIdTag                  = "NameID"
 	SubjectConfirmationTag     = "SubjectConfirmation"
 	SubjectConfirmationDataTag = "SubjectConfirmationData"
 	AttributeStatementTag      = "AttributeStatement"

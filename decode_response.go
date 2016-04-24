@@ -55,7 +55,7 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		return nil, fmt.Errorf("Error getting response: %v", err)
 	}
 
-	crt, ok := sp.SPKeyStore.(TLSCertKeyStore)
+	crt, ok := sp.SPKeyStore.(dsig.TLSCertKeyStore)
 	if !ok {
 		return nil, fmt.Errorf("Cannot get tls.Certificate from keystore")
 	}

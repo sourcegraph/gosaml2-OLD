@@ -2,17 +2,23 @@ package saml2
 
 import "fmt"
 
-//ErrMissingElement is the error type that indicates an element is missing. It
-//provides a structured error that can be more appropriately acted upon
+//ErrMissingElement is the error type that indicates an element and/or attribute is
+//missing. It provides a structured error that can be more appropriately acted
+//upon.
 type ErrMissingElement struct {
-	Tag string
+	Tag, Attribute string
 }
 
+//ErrMissingAssertion indicates that an appropriate assertion element could not
+//be found in the SAML Response
 var (
-	ErrMissingAssertion = ErrMissingElement{AssertionTag}
+	ErrMissingAssertion = ErrMissingElement{Tag: AssertionTag}
 )
 
 func (e ErrMissingElement) Error() string {
+	if e.Attribute != "" {
+		return fmt.Sprintf("missing %s attribute on %s element", e.Attribute, e.Tag)
+	}
 	return fmt.Sprintf("missing %s element", e.Tag)
 }
 

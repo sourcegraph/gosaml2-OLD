@@ -2,6 +2,7 @@ package saml2
 
 import (
 	"bytes"
+	"compress/flate"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -98,9 +99,26 @@ func (sp *SAMLServiceProvider) BuildAuthURL(relayState string) (string, error) {
 		return "", err
 	}
 
+	buf := &bytes.Buffer{}
+
+	fw, err := flate.NewWriter(buf, flate.DefaultCompression)
+	if err != nil {
+		return "", fmt.Errorf("flate NewWriter error: %v", err)
+	}
+
+	_, err = fw.Write([]byte(authnRequest))
+	if err != nil {
+		return "", fmt.Errorf("flate.Writer Write error: %v", err)
+	}
+
+	err = fw.Close()
+	if err != nil {
+		return "", fmt.Errorf("flate.Writer Close error: %v", err)
+	}
+
 	qs := parsedUrl.Query()
 
-	qs.Add("SAMLRequest", base64.StdEncoding.EncodeToString([]byte(authnRequest)))
+	qs.Add("SAMLRequest", base64.StdEncoding.EncodeToString(buf.Bytes()))
 
 	if relayState != "" {
 		qs.Add("RelayState", relayState)

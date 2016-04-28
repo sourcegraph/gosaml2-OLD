@@ -9,6 +9,7 @@ type SAMLServiceProvider struct {
 	IdentityProviderIssuer      string
 	AssertionConsumerServiceURL string
 	SignAuthnRequests           bool
+	SignAuthnRequestsAlgorithm  dsig.SignatureAlgorithm
 	AudienceURI                 string
 	IDPCertificateStore         dsig.X509CertificateStore
 	SPKeyStore                  dsig.X509KeyStore
@@ -41,7 +42,6 @@ type AssertionInfo struct {
 func childPath(space, tag string) string {
 	if space == "" {
 		return "./" + tag
-	} else {
-		return "./" + space + ":" + tag
 	}
+	return "./" + space + ":" + tag
 }

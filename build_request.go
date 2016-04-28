@@ -47,7 +47,11 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 	doc := etree.NewDocument()
 
 	if sp.SignAuthnRequests {
-		signed, err := sp.SigningContext().SignEnveloped(authnRequest)
+		ctx := sp.SigningContext()
+		if string(sp.SignAuthnRequestsAlgorithm) != "" {
+			ctx.Algorithm = sp.SignAuthnRequestsAlgorithm
+		}
+		signed, err := ctx.SignEnveloped(authnRequest)
 		if err != nil {
 			return "", err
 		}

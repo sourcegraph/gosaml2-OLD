@@ -8,8 +8,6 @@ import (
 
 	"github.com/beevik/etree"
 	dsig "github.com/russellhaering/goxmldsig"
-
-	s2 "github.com/andrewstuart/gosaml2"
 )
 
 func (sp *SAMLServiceProvider) validationContext() *dsig.ValidationContext {
@@ -49,18 +47,31 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 
 	//If the error indicated a missing assertion, proceed to attempt decryption
 	//of encrypted assertion.
-	res, err := s2.NewResponseFromReader(bytes.NewReader(raw))
+	res, err := NewResponseFromReader(bytes.NewReader(raw))
 
 	if err != nil {
 		return nil, fmt.Errorf("Error getting response: %v", err)
 	}
 
-	crt, ok := sp.SPKeyStore.(dsig.TLSCertKeyStore)
-	if !ok {
+	var decryptCert tls.Certificate
+
+	if crt, ok := sp.SPKeyStore.(dsig.TLSCertKeyStore); ok {
+		decryptCert = tls.Certificate(crt)
+	} else {
+		pk, cert, err := sp.SPKeyStore.GetKeyPair()
+		if err != nil {
+			return nil, fmt.Errorf("error getting keypair: %v", err)
+		}
+
+		decryptCert = tls.Certificate{
+			Certificate: [][]byte{cert},
+			PrivateKey:  pk,
+		}
+
 		return nil, fmt.Errorf("Cannot get tls.Certificate from keystore")
 	}
 
-	docBytes, err := res.Decrypt(tls.Certificate(crt))
+	docBytes, err := res.Decrypt(tls.Certificate(decryptCert))
 
 	if err != nil {
 		return nil, fmt.Errorf("Error decrypting assertion: %v", err)

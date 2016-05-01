@@ -53,12 +53,15 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		return nil, fmt.Errorf("Error getting response: %v", err)
 	}
 
+	//This is the tls.Certificate we'll use to decrypt
 	var decryptCert tls.Certificate
 
 	switch crt := sp.SPKeyStore.(type) {
 	case dsig.TLSCertKeyStore:
+		//Get the tls.Certificate directly if possible
 		decryptCert = tls.Certificate(crt)
 	default:
+		//Otherwise, construct one from the results of GetKeyPair
 		pk, cert, err := sp.SPKeyStore.GetKeyPair()
 		if err != nil {
 			return nil, fmt.Errorf("error getting keypair: %v", err)
@@ -70,12 +73,14 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		}
 	}
 
-	docBytes, err := res.Decrypt(tls.Certificate(decryptCert))
+	//Decrypt the xml contents of the assertion
+	docBytes, err := res.Decrypt(decryptCert)
 
 	if err != nil {
 		return nil, fmt.Errorf("Error decrypting assertion: %v", err)
 	}
 
+	//Read the assertion and return it
 	resDoc := etree.NewDocument()
 	err = resDoc.ReadFromBytes(docBytes)
 

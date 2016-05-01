@@ -55,9 +55,10 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 
 	var decryptCert tls.Certificate
 
-	if crt, ok := sp.SPKeyStore.(dsig.TLSCertKeyStore); ok {
+	switch crt := sp.SPKeyStore.(type) {
+	case dsig.TLSCertKeyStore:
 		decryptCert = tls.Certificate(crt)
-	} else {
+	default:
 		pk, cert, err := sp.SPKeyStore.GetKeyPair()
 		if err != nil {
 			return nil, fmt.Errorf("error getting keypair: %v", err)
@@ -67,8 +68,6 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 			Certificate: [][]byte{cert},
 			PrivateKey:  pk,
 		}
-
-		return nil, fmt.Errorf("Cannot get tls.Certificate from keystore")
 	}
 
 	docBytes, err := res.Decrypt(tls.Certificate(decryptCert))

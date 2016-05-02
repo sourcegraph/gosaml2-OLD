@@ -29,7 +29,7 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 
 	el, err := sp.ValidateEncodedResponse(encodedResponse)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error validating response: %v", err)
 	}
 
 	assertionElement := el.FindElement(AssertionTag)

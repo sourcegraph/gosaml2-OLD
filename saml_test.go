@@ -149,6 +149,7 @@ func TestSAML(t *testing.T) {
 
 	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredReferenceURIResponse)))
 	require.Error(t, err)
+	// require.IsType(t, ErrInvalidValue{}, err, err.Error())
 	require.Equal(t, "Could not verify certificate against trusted certs", err.Error())
 
 	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredSignedInfoResponse)))

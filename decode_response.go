@@ -30,7 +30,7 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 	}
 
 	response, err := sp.validationContext().Validate(doc.Root())
-	if err != nil && !sp.SkipSignatureValidation {
+	if err != nil && !sp.SkipSignatureValidation || response == nil {
 		return nil, err
 	}
 

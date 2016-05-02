@@ -20,11 +20,7 @@ type Response struct {
 	Data        string       `xml:"EncryptedAssertion>EncryptedData>CipherData>CipherValue"`
 	Signature   string       `xml:"Signature>SignatureValue"`
 	Digest      string       `xml:"Signature>SignedInfo>Reference>DigestValue"`
-	//TODO xml.Unmarshaler to automatically decrypt assertion?
-	// Assertion   Assertion    `xml:"EncryptedAssertion>EncryptedData>CipherData>CipherValue"`
 }
-
-//TODO replace NewResponseFromReader with a custom UnmrashalXML?
 
 //NewResponseFromReader returns a Response or error based on the given reader.
 func NewResponseFromReader(r io.Reader) (*Response, error) {

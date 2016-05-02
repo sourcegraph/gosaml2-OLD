@@ -37,10 +37,7 @@ CQ1CF8ZDDJ0XV6Ab
 func TestEncryptedAssertion(t *testing.T) {
 	var err error
 	cert, err := tls.LoadX509KeyPair("./testdata/test.crt", "./testdata/test.key")
-
-	if err != nil {
-		t.Fatalf("could not load x509 key pair: %v", err)
-	}
+	require.NoError(t, err, "could not load x509 key pair")
 
 	block, _ := pem.Decode([]byte(idpCert))
 

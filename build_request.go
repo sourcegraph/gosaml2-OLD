@@ -28,10 +28,7 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 	authnRequest.CreateAttr("AssertionConsumerServiceIndex", "0")
 	authnRequest.CreateAttr("AttributeConsumingServiceIndex", "0")
 	authnRequest.CreateAttr("IssueInstant", time.Now().UTC().Format(issueInstantFormat))
-
-	authnRequest.CreateAttr("Destination", "http://idp.astuart.co/idp/profile/SAML2/Redirect/SSO")
-	// authnRequest.CreateAttr("Destination", sp.IdentityProviderSSOURL)
-
+	authnRequest.CreateAttr("Destination", sp.IdentityProviderSSOURL)
 	authnRequest.CreateElement("saml:Issuer").SetText(sp.IdentityProviderIssuer)
 
 	nameIdPolicy := authnRequest.CreateElement("samlp:NameIDPolicy")

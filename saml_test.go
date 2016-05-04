@@ -8,7 +8,7 @@ import (
 
 	"github.com/beevik/etree"
 	"github.com/russellhaering/goxmldsig"
-	"github.com/stretchr/testify/require"
+	require "github.com/stretchr/testify/require"
 )
 
 func signResponse(t *testing.T, resp string, sp *SAMLServiceProvider) string {
@@ -149,6 +149,7 @@ func TestSAML(t *testing.T) {
 
 	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredReferenceURIResponse)))
 	require.Error(t, err)
+	// require.IsType(t, ErrInvalidValue{}, err, err.Error())
 	require.Equal(t, "Could not verify certificate against trusted certs", err.Error())
 
 	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredSignedInfoResponse)))
@@ -158,22 +159,29 @@ func TestSAML(t *testing.T) {
 	alteredRecipient := signResponse(t, alteredRecipientResponse, sp)
 	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredRecipient)))
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Did not recognize Recipient")
+	require.IsType(t, err, ErrInvalidValue{})
+	require.Contains(t, err.Error(), "Recipient")
 
 	alteredDestination := signResponse(t, alteredDestinationResponse, sp)
 	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredDestination)))
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Did not recognize Destination")
+	require.IsType(t, err, ErrInvalidValue{})
+	require.Equal(t, err.(ErrInvalidValue).Key, "Destination")
 
 	alteredSubjectConfirmationMethod := signResponse(t, alteredSubjectConfirmationMethodResponse, sp)
 	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredSubjectConfirmationMethod)))
 	require.Error(t, err)
-	require.Equal(t, "Unsupported subject confirmation method", err.Error())
+	require.IsType(t, err, ErrInvalidValue{})
+	require.Equal(t, err.(ErrInvalidValue).Reason, ReasonUnsupported)
+	require.Equal(t, err.(ErrInvalidValue).Key, SubjectConfirmationTag)
 
 	alteredVersion := signResponse(t, alteredVersionResponse, sp)
 	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(alteredVersion)))
 	require.Error(t, err)
-	require.Equal(t, "Unsupported SAML version", err.Error())
+	require.IsType(t, err, ErrInvalidValue{})
+	require.Equal(t, err.(ErrInvalidValue).Reason, ReasonUnsupported)
+	require.Equal(t, err.(ErrInvalidValue).Key, "SAML version")
+	require.Contains(t, err.Error(), "Unsupported SAML version")
 
 	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(missingIDResponse)))
 	require.Error(t, err)

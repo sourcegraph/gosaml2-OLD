@@ -25,8 +25,6 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 	authnRequest.CreateAttr("Version", "2.0")
 	authnRequest.CreateAttr("ProtocolBinding", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST")
 	authnRequest.CreateAttr("AssertionConsumerServiceURL", sp.AssertionConsumerServiceURL)
-	authnRequest.CreateAttr("AssertionConsumerServiceIndex", "0")
-	authnRequest.CreateAttr("AttributeConsumingServiceIndex", "0")
 	authnRequest.CreateAttr("IssueInstant", time.Now().UTC().Format(issueInstantFormat))
 	authnRequest.CreateAttr("Destination", sp.IdentityProviderSSOURL)
 	authnRequest.CreateElement("saml:Issuer").SetText(sp.IdentityProviderIssuer)

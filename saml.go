@@ -2,7 +2,7 @@ package saml2
 
 import dsig "github.com/russellhaering/goxmldsig"
 
-const issueInstantFormat = "2006-01-02T15:04:05"
+const issueInstantFormat = "2006-01-02T15:04:05Z"
 
 type SAMLServiceProvider struct {
 	IdentityProviderSSOURL      string

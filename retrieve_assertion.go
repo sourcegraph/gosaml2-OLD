@@ -1,6 +1,11 @@
 package saml2
 
-import "fmt"
+import (
+	"encoding/xml"
+	"fmt"
+
+	"github.com/beevik/etree"
+)
 
 //ErrMissingElement is the error type that indicates an element and/or attribute is
 //missing. It provides a structured error that can be more appropriately acted
@@ -66,17 +71,28 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 		return nil, ErrMissingElement{Tag: AttributeStatementTag}
 	}
 
-	info := make(map[string]string)
-	for _, child := range attributeStatement.ChildElements() {
-		nameAttr := child.SelectAttr(NameAttr)
-		attributeValue := child.FindElement(childPath(child.Space, AttributeValueTag))
-		if attributeValue == nil {
-			return nil, ErrMissingElement{Tag: AttributeValueTag}
-		}
-		info[nameAttr.Value] = attributeValue.Text()
+	doc := etree.NewDocument()
+	doc.SetRoot(attributeStatement)
+	bs, err := doc.WriteToBytes()
+
+	if err != nil {
+		return nil, err
 	}
 
-	assertionInfo.Values = info
+	var attrs struct {
+		List []Attribute `xml:"Attribute"`
+	}
+	err = xml.Unmarshal(bs, &attrs)
+	if err != nil {
+		return nil, err
+	}
+
+	av := make(map[string]Attribute)
+	for _, child := range attrs.List {
+		av[child.Name] = child
+	}
+
+	assertionInfo.Values = Values(av)
 	assertionInfo.WarningInfo = warningInfo
 	return assertionInfo, nil
 }

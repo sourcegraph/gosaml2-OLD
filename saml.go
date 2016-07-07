@@ -35,7 +35,7 @@ type WarningInfo struct {
 
 type AssertionInfo struct {
 	NameID      string
-	Values      map[string]string
+	Values      Values
 	WarningInfo *WarningInfo
 }
 

@@ -64,6 +64,6 @@ func (vals Values) Add(k, v string) {
 }
 
 // Delete implements a quick key delete
-func (vals Values) Del(k) {
+func (vals Values) Del(k string) {
 	delete(vals, k)
 }

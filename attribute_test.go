@@ -2,7 +2,6 @@ package saml2
 
 import (
 	"encoding/xml"
-	"log"
 	"strings"
 	"testing"
 )
@@ -58,6 +57,4 @@ func TestAttributeDecode(t *testing.T) {
 	if attr.Name != attrName {
 		t.Errorf("Wrong attribute name: %s, should be %s", attr.Name, attrName)
 	}
-
-	log.Printf("%#v", attr)
 }

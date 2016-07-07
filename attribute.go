@@ -13,7 +13,8 @@ type Attribute struct {
 	Values       []AttrVal `xml:"AttributeValue"`
 }
 
-// Value is an abstraction for the
+// AttrVal is an abstraction for the string value of an XML document, which will
+// ensure that all surrounding space is trimmed during Unmarshaling
 type AttrVal string
 
 // UnmarshalXML implements xml.Unmarshaler
@@ -27,11 +28,12 @@ func (v *AttrVal) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	return nil
 }
 
-// Values is a type for holding Assertion Values which may be multi-valued
+// Values is a convenience wrapper for a map of strings to Attributes, which
+// can be used for easy access to the string values of Attribute lists.
 type Values map[string]Attribute
 
 // Get is a safe method (nil maps will not panic) for returning the first value
-// for an assertion key.
+// for an attribute at a key, or the empty string if none exists.
 func (vals Values) Get(k string) string {
 	if vals == nil {
 		return ""
@@ -42,14 +44,15 @@ func (vals Values) Get(k string) string {
 	return ""
 }
 
-// Set replaces any pre-existing key's values (if any existed) with only the
-// given value.
+// Set replaces any pre-existing key's values (if any existed) with an
+// attribute containing only the given value.
 func (vals Values) Set(k, v string) {
 	vals[k] = Attribute{Values: []AttrVal{AttrVal(v)}}
 }
 
-// Add appends to any set of values, whether or not the key existed already.
-// That is, it will create a slice if none existed.
+// Add appends to any Attribute's set of values, whether or not the key existed
+// already. That is, it will create an attribute with a one-length slice if none
+// existed.
 func (vals Values) Add(k, v string) {
 	if _, ok := vals[k]; !ok {
 		vals.Set(k, v)
@@ -58,4 +61,9 @@ func (vals Values) Add(k, v string) {
 	val := vals[k]
 	val.Values = append(val.Values, AttrVal(v))
 	vals[k] = val
+}
+
+// Delete implements a quick key delete
+func (vals Values) Del(k) {
+	delete(vals, k)
 }

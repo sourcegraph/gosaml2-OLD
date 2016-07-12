@@ -79,20 +79,10 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 		return nil, err
 	}
 
-	var attrs struct {
-		List []Attribute `xml:"Attribute"`
-	}
-	err = xml.Unmarshal(bs, &attrs)
+	err = xml.Unmarshal(bs, &assertionInfo.Values)
 	if err != nil {
 		return nil, err
 	}
-
-	av := make(map[string]Attribute)
-	for _, child := range attrs.List {
-		av[child.Name] = child
-	}
-
-	assertionInfo.Values = Values(av)
 	assertionInfo.WarningInfo = warningInfo
 	return assertionInfo, nil
 }

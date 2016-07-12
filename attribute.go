@@ -67,3 +67,21 @@ func (vals Values) Add(k, v string) {
 func (vals Values) Del(k string) {
 	delete(vals, k)
 }
+
+// UnmarshalXML implements encoding/xml.Unmarshaler
+func (vals *Values) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	*vals = Values{}
+
+	var list struct{ Attribute []Attribute }
+
+	err := d.DecodeElement(&list, &start)
+	if err != nil {
+		return err
+	}
+
+	for _, a := range list.Attribute {
+		(*vals)[a.Name] = a
+	}
+
+	return nil
+}

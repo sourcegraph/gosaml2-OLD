@@ -16,7 +16,7 @@ import (
 )
 
 func TestRedirect(t *testing.T) {
-	r := &http.Request{}
+	r := &http.Request{URL: &url.URL{Path: "/"}}
 	w := httptest.NewRecorder()
 
 	spURL := "https://sp.test"

@@ -24,12 +24,10 @@ type Response struct {
 
 //NewResponseFromReader returns a Response or error based on the given reader.
 func NewResponseFromReader(r io.Reader) (*Response, error) {
-	buf := &bytes.Buffer{}
-
 	var res Response
 
 	//Decode and copy bytes into buffer
-	err := xml.NewDecoder(io.TeeReader(r, buf)).Decode(&res)
+	err := xml.NewDecoder(r).Decode(&res)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ import (
 	"compress/flate"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -104,4 +105,17 @@ func (sp *SAMLServiceProvider) BuildAuthURL(relayState string) (string, error) {
 
 	parsedUrl.RawQuery = qs.Encode()
 	return parsedUrl.String(), nil
+}
+
+// AuthRedirect takes a ResponseWriter and Request from an http interaction and
+// redirects to the SAMLServiceProvider's configured IdP, including the
+// relayState provided, if any.
+func (sp *SAMLServiceProvider) AuthRedirect(w http.ResponseWriter, r *http.Request, relayState string) (err error) {
+	url, err := sp.BuildAuthURL(relayState)
+	if err != nil {
+		return err
+	}
+
+	http.Redirect(w, r, url, http.StatusFound)
+	return nil
 }

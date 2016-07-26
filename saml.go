@@ -1,6 +1,10 @@
 package saml2
 
-import dsig "github.com/russellhaering/goxmldsig"
+import (
+	"sync"
+
+	dsig "github.com/russellhaering/goxmldsig"
+)
 
 const issueInstantFormat = "2006-01-02T15:04:05Z"
 
@@ -9,17 +13,32 @@ type SAMLServiceProvider struct {
 	IdentityProviderIssuer      string
 	AssertionConsumerServiceURL string
 	SignAuthnRequests           bool
-	SignAuthnRequestsAlgorithm  dsig.SignatureAlgorithm
+	SignAuthnRequestsAlgorithm  string
 	AudienceURI                 string
 	IDPCertificateStore         dsig.X509CertificateStore
 	SPKeyStore                  dsig.X509KeyStore
 	NameIdFormat                string
 	SkipSignatureValidation     bool
 	Clock                       *dsig.Clock
+	signingContextMu            sync.RWMutex
+	signingContext              *dsig.SigningContext
 }
 
 func (sp *SAMLServiceProvider) SigningContext() *dsig.SigningContext {
-	return dsig.NewDefaultSigningContext(sp.SPKeyStore)
+	sp.signingContextMu.RLock()
+	signingContext := sp.signingContext
+	sp.signingContextMu.RUnlock()
+
+	if signingContext != nil {
+		return signingContext
+	}
+
+	sp.signingContextMu.Lock()
+	defer sp.signingContextMu.Unlock()
+
+	sp.signingContext = dsig.NewDefaultSigningContext(sp.SPKeyStore)
+	sp.signingContext.SetSignatureMethod(sp.SignAuthnRequestsAlgorithm)
+	return sp.signingContext
 }
 
 type ProxyRestriction struct {

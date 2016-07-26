@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/beevik/etree"
 	"github.com/satori/go.uuid"
@@ -26,7 +25,7 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 	authnRequest.CreateAttr("Version", "2.0")
 	authnRequest.CreateAttr("ProtocolBinding", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST")
 	authnRequest.CreateAttr("AssertionConsumerServiceURL", sp.AssertionConsumerServiceURL)
-	authnRequest.CreateAttr("IssueInstant", time.Now().UTC().Format(issueInstantFormat))
+	authnRequest.CreateAttr("IssueInstant", sp.Clock.Now().UTC().Format(issueInstantFormat))
 	authnRequest.CreateAttr("Destination", sp.IdentityProviderSSOURL)
 	authnRequest.CreateElement("saml:Issuer").SetText(sp.IdentityProviderIssuer)
 

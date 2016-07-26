@@ -48,7 +48,7 @@ const (
 //all SAML2 contracts are upheld.
 func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertionElement, conditionsStatement *etree.Element) (*WarningInfo, error) {
 	warningInfo := &WarningInfo{}
-	now := time.Now()
+	now := sp.Clock.Now()
 
 	notBeforeAttr := conditionsStatement.SelectAttr(NotBeforeAttr)
 	if notBeforeAttr != nil {
@@ -201,13 +201,13 @@ func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
 		if err != nil {
 			return ErrParsing{Tag: NotOnOrAfterAttr, Value: notOnOrAfterAttr.Value, Type: "time.RFC3339"}
 		}
-		t := time.Now()
+		now := sp.Clock.Now()
 
-		if time.Now().After(after) {
+		if now.After(after) {
 			return ErrInvalidValue{
 				Reason:   ReasonExpired,
 				Key:      NotOnOrAfterAttr,
-				Expected: t.Format(time.RFC3339),
+				Expected: now.Format(time.RFC3339),
 				Actual:   notOnOrAfterAttr.Value,
 			}
 		}

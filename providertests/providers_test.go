@@ -21,6 +21,18 @@ func TestValidateResponses(t *testing.T) {
 				Clock:                       dsig.NewFakeClock(clockwork.NewFakeClockAt(time.Date(2016, 7, 25, 17, 50, 0, 0, time.UTC))),
 			},
 		},
+		{
+			Response: LoadXMLResponse("./testdata/okta_response.xml"),
+			ServiceProvider: &saml2.SAMLServiceProvider{
+				IdentityProviderSSOURL:      "https://dev-116807.oktapreview.com/app/scaleftdev116807_test_1/exk659aytfMeNI49v0h7/sso/saml",
+				IdentityProviderIssuer:      "http://www.okta.com/exk659aytfMeNI49v0h7",
+				AssertionConsumerServiceURL: "http://localhost:8080/v1/_saml_callback",
+				SignAuthnRequests:           true,
+				AudienceURI:                 "123",
+				IDPCertificateStore:         LoadCertificateStore("./testdata/okta_cert.pem"),
+				Clock:                       dsig.NewFakeClock(clockwork.NewFakeClockAt(time.Date(2016, 7, 25, 17, 50, 0, 0, time.UTC))),
+			},
+		},
 	}
 
 	ExerciseProviderTestScenarios(t, scenarios)

@@ -12,7 +12,7 @@ implementation of XML digital signatures.
 Install `gosaml2` into your `$GOPATH` using `go get`:
 
 ```
-$ go get github.com/russellhaering/gosaml2`
+$ go get github.com/russellhaering/gosaml2
 ```
 
 ## Example

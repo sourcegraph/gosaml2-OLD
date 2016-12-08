@@ -30,3 +30,4 @@ The following identity providers have been tested:
 * Okta
 * Auth0
 * Shibboleth
+* Ipsilon

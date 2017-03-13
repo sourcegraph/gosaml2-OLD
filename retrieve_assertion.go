@@ -67,21 +67,23 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 
 	//Get the actual assertion attributes
 	attributeStatement := assertionElement.FindElement(childPath(assertionElement.Space, AttributeStatementTag))
-	if attributeStatement == nil {
+	if attributeStatement == nil && !sp.AllowMissingAttributes {
 		return nil, ErrMissingElement{Tag: AttributeStatementTag}
 	}
 
-	doc := etree.NewDocument()
-	doc.SetRoot(attributeStatement)
-	bs, err := doc.WriteToBytes()
+	if attributeStatement != nil {
+		doc := etree.NewDocument()
+		doc.SetRoot(attributeStatement)
+		bs, err := doc.WriteToBytes()
 
-	if err != nil {
-		return nil, err
-	}
+		if err != nil {
+			return nil, err
+		}
 
-	err = xml.Unmarshal(bs, &assertionInfo.Values)
-	if err != nil {
-		return nil, err
+		err = xml.Unmarshal(bs, &assertionInfo.Values)
+		if err != nil {
+			return nil, err
+		}
 	}
 	assertionInfo.WarningInfo = warningInfo
 	return assertionInfo, nil

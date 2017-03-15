@@ -19,6 +19,7 @@ type SAMLServiceProvider struct {
 	SPKeyStore                  dsig.X509KeyStore
 	NameIdFormat                string
 	SkipSignatureValidation     bool
+	AllowMissingAttributes      bool
 	Clock                       *dsig.Clock
 	signingContextMu            sync.RWMutex
 	signingContext              *dsig.SigningContext

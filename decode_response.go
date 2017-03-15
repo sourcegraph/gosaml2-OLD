@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/base64"
-	"errors"
 	"fmt"
 
 	"github.com/beevik/etree"
@@ -35,7 +34,7 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 	response := doc.Root()
 	if !sp.SkipSignatureValidation {
 		response, err = sp.validationContext().Validate(doc.Root())
-		if err == errors.New("Missing signature referencing the top-level element") {
+		if err == dsig.ErrMissingSignature {
 			// Attempt to verify the assertion's signature
 			assertionElement := doc.Root().FindElement(AssertionTag)
 			if assertionElement == nil {

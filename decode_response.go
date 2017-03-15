@@ -31,22 +31,25 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		return nil, err
 	}
 
-	response, err := sp.validationContext().Validate(doc.Root())
-	if err != nil && !sp.SkipSignatureValidation || response == nil {
-		// Attempt to verify the assertion's signature
-		assertionElement := doc.Root().FindElement(AssertionTag)
-		if assertionElement == nil {
-			return nil, err
-		}
+	response := doc.Root()
+	if !sp.SkipSignatureValidation {
+		response, err = sp.validationContext().Validate(doc.Root())
+		if err != nil || response == nil {
+			// Attempt to verify the assertion's signature
+			assertionElement := doc.Root().FindElement(AssertionTag)
+			if assertionElement == nil {
+				return nil, err
+			}
 
-		response, err = sp.validationContext().Validate(assertionElement)
-		if err != nil && !sp.SkipSignatureValidation || response == nil {
-			return nil, err
-		}
+			response, err = sp.validationContext().Validate(assertionElement)
+			if err != nil || response == nil {
+				return nil, err
+			}
 
-		doc.RemoveChild(assertionElement)
-		doc.AddChild(response)
-		response = doc.Root()
+			doc.RemoveChild(assertionElement)
+			doc.AddChild(response)
+			response = doc.Root()
+		}
 	}
 
 	err = sp.Validate(response)

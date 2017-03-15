@@ -40,7 +40,9 @@ func TestValidateResponses(t *testing.T) {
 				IdentityProviderIssuer:      "https://app.onelogin.com/saml/metadata/634027",
 				AssertionConsumerServiceURL: "http://884d40bf.ngrok.io/api/sso/saml2/acs/58af624473d4f375b8e70d81",
 				IDPCertificateStore:         LoadCertificateStore("./testdata/onelogin_cert.pem"),
-				Clock:                       dsig.NewFakeClock(clockwork.NewFakeClockAt(time.Date(2017, 3, 7, 22, 50, 0, 0, time.UTC))),
+				SkipSignatureValidation:     true,
+				AllowMissingAttributes:      true,
+				Clock: dsig.NewFakeClock(clockwork.NewFakeClockAt(time.Date(2017, 3, 7, 22, 50, 0, 0, time.UTC))),
 			},
 		},
 	}

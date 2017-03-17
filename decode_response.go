@@ -34,7 +34,22 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 	response := doc.Root()
 	if !sp.SkipSignatureValidation {
 		response, err = sp.validationContext().Validate(doc.Root())
-		if err != nil || response == nil {
+		if err == dsig.ErrMissingSignature {
+			// Attempt to verify the assertion's signature
+			assertionElement := doc.Root().FindElement(AssertionTag)
+			if assertionElement == nil {
+				return nil, err
+			}
+
+			response, err = sp.validationContext().Validate(assertionElement)
+			if err != nil || response == nil {
+				return nil, err
+			}
+
+			doc.RemoveChild(assertionElement)
+			doc.AddChild(response)
+			response = doc.Root()
+		} else if err != nil || response == nil {
 			return nil, err
 		}
 	}

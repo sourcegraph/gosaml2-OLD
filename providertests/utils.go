@@ -43,13 +43,16 @@ func LoadCertificateStore(path string) dsig.X509CertificateStore {
 }
 
 type ProviderTestScenario struct {
+	ScenarioName    string
 	Response        string
 	ServiceProvider *saml2.SAMLServiceProvider
 }
 
 func ExerciseProviderTestScenarios(t *testing.T, scenarios []ProviderTestScenario) {
 	for _, scenario := range scenarios {
-		_, err := scenario.ServiceProvider.RetrieveAssertionInfo(scenario.Response)
-		require.NoError(t, err)
+		t.Run(scenario.ScenarioName, func(t *testing.T) {
+			_, err := scenario.ServiceProvider.RetrieveAssertionInfo(scenario.Response)
+			require.NoError(t, err)
+		})
 	}
 }

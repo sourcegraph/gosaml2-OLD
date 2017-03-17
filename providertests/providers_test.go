@@ -12,7 +12,8 @@ import (
 func TestValidateResponses(t *testing.T) {
 	scenarios := []ProviderTestScenario{
 		{
-			Response: LoadXMLResponse("./testdata/auth0_response.xml"),
+			ScenarioName: "Auth0",
+			Response:     LoadXMLResponse("./testdata/auth0_response.xml"),
 			ServiceProvider: &saml2.SAMLServiceProvider{
 				IdentityProviderSSOURL:      "https://scaleft-test.auth0.com/samlp/rlXOZ4kOUTQaTV8icSXrfZUd1qtD1NhK",
 				IdentityProviderIssuer:      "urn:scaleft-test.auth0.com",
@@ -21,8 +22,10 @@ func TestValidateResponses(t *testing.T) {
 				Clock:                       dsig.NewFakeClock(clockwork.NewFakeClockAt(time.Date(2016, 7, 25, 17, 50, 0, 0, time.UTC))),
 			},
 		},
+
 		{
-			Response: LoadXMLResponse("./testdata/okta_response.xml"),
+			ScenarioName: "Okta",
+			Response:     LoadXMLResponse("./testdata/okta_response.xml"),
 			ServiceProvider: &saml2.SAMLServiceProvider{
 				IdentityProviderSSOURL:      "https://dev-116807.oktapreview.com/app/scaleftdev116807_test_1/exk659aytfMeNI49v0h7/sso/saml",
 				IdentityProviderIssuer:      "http://www.okta.com/exk659aytfMeNI49v0h7",
@@ -34,7 +37,8 @@ func TestValidateResponses(t *testing.T) {
 			},
 		},
 		{
-			Response: LoadXMLResponse("./testdata/onelogin_response.xml"),
+			ScenarioName: "OneLogin",
+			Response:     LoadXMLResponse("./testdata/onelogin_response.xml"),
 			ServiceProvider: &saml2.SAMLServiceProvider{
 				IdentityProviderSSOURL:      "https://launchdarkly-dev.onelogin.com/trust/saml2/http-post/sso/634027",
 				IdentityProviderIssuer:      "https://app.onelogin.com/saml/metadata/634027",

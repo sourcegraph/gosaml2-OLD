@@ -33,22 +33,39 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 
 	response := doc.Root()
 	if !sp.SkipSignatureValidation {
-		response, err = sp.validationContext().Validate(doc.Root())
+		response, err = sp.validationContext().Validate(response)
 		if err == dsig.ErrMissingSignature {
-			// Attempt to verify the assertion's signature
-			assertionElement := doc.Root().FindElement(AssertionTag)
-			if assertionElement == nil {
-				return nil, err
-			}
+			// The Response wasn't signed. It is possible that the Assertion inside of
+			// the Response was signed.
 
-			response, err = sp.validationContext().Validate(assertionElement)
-			if err != nil || response == nil {
-				return nil, err
-			}
-
-			doc.RemoveChild(assertionElement)
-			doc.AddChild(response)
+			// Unfortunately we just blew away our Response
 			response = doc.Root()
+
+			unverifiedAssertion := response.FindElement(AssertionTag)
+			if unverifiedAssertion == nil {
+				return nil, ErrMissingAssertion
+			}
+
+			assertion, err := sp.validationContext().Validate(unverifiedAssertion)
+			if err != nil {
+				return nil, err
+			}
+
+			// Because the top level response wasn't signed, we don't trust it
+			// or any of its children - except the signed assertions as returned
+			// by the signature validation. Make a copy of the response (to avoid mutating
+			// the original document) and strip all of its children, then re-add only
+			// the validated assertion.
+			//
+			// Note that we're leaving attributes of the Response in place. Since we're
+			// processing an unsigned Response they can't be trusted, but we'll validate
+			// them anyway.
+			response = response.Copy()
+			for _, el := range response.ChildElements() {
+				response.RemoveChild(el)
+			}
+
+			response.AddChild(assertion)
 		} else if err != nil || response == nil {
 			return nil, err
 		}

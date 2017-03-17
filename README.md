@@ -31,3 +31,4 @@ The following identity providers have been tested:
 * Auth0
 * Shibboleth
 * Ipsilon
+* OneLogin

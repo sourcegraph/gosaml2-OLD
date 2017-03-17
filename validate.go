@@ -127,32 +127,6 @@ func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertionElement, condi
 func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
 	el = el.Copy()
 
-	destinationAttr := el.SelectAttr(DestinationAttr)
-	if destinationAttr == nil {
-		return ErrMissingElement{Tag: DestinationAttr}
-	}
-	if destinationAttr.Value != sp.AssertionConsumerServiceURL {
-		return ErrInvalidValue{Key: DestinationAttr, Expected: sp.AssertionConsumerServiceURL, Actual: destinationAttr.Value}
-	}
-
-	idAttr := el.SelectAttr(IdAttr)
-	if idAttr == nil || idAttr.Value == "" {
-		return ErrMissingElement{Tag: el.Tag, Attribute: IdAttr}
-	}
-
-	versionAttr := el.SelectAttr(VersionAttr)
-	if versionAttr == nil {
-		return ErrMissingElement{Tag: el.Tag, Attribute: VersionAttr}
-	}
-	if versionAttr.Value != "2.0" {
-		return ErrInvalidValue{
-			Reason:   ReasonUnsupported,
-			Key:      "SAML version",
-			Expected: "2.0",
-			Actual:   versionAttr.Value,
-		}
-	}
-
 	assertionElement := el.FindElement(AssertionTag)
 	if assertionElement == nil {
 		return ErrMissingAssertion

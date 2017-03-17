@@ -16,6 +16,48 @@ func (sp *SAMLServiceProvider) validationContext() *dsig.ValidationContext {
 	return ctx
 }
 
+// validateResponseAttributes validates a SAML Response's tag and attributes. It does
+// not inspect child elements of the Response at all.
+func (sp *SAMLServiceProvider) validateResponseAttributes(response *etree.Element) error {
+	if response.Tag != ResponseTag {
+		return ErrMissingElement{
+			Tag: ResponseTag,
+		}
+	}
+
+	destinationAttr := response.SelectAttr(DestinationAttr)
+	if destinationAttr == nil {
+		return ErrMissingElement{Tag: DestinationAttr}
+	}
+
+	if destinationAttr.Value != sp.AssertionConsumerServiceURL {
+		return ErrInvalidValue{
+			Key:      DestinationAttr,
+			Expected: sp.AssertionConsumerServiceURL,
+			Actual:   destinationAttr.Value,
+		}
+	}
+
+	versionAttr := response.SelectAttr(VersionAttr)
+	if versionAttr == nil {
+		return ErrMissingElement{
+			Tag:       response.Tag,
+			Attribute: VersionAttr,
+		}
+	}
+
+	if versionAttr.Value != "2.0" {
+		return ErrInvalidValue{
+			Reason:   ReasonUnsupported,
+			Key:      "SAML version",
+			Expected: "2.0",
+			Actual:   versionAttr.Value,
+		}
+	}
+
+	return nil
+}
+
 //ValidateEncodedResponse both decodes and validates, based on SP
 //configuration, an encoded, signed response. It will also appropriately
 //decrypt a response if the assertion was encrypted
@@ -32,6 +74,11 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 	}
 
 	response := doc.Root()
+	err = sp.validateResponseAttributes(response)
+	if err != nil {
+		return nil, err
+	}
+
 	if !sp.SkipSignatureValidation {
 		response, err = sp.validationContext().Validate(response)
 		if err == dsig.ErrMissingSignature {

@@ -12,6 +12,8 @@ import (
 	"github.com/satori/go.uuid"
 )
 
+const issueInstantFormat = "2006-01-02T15:04:05Z"
+
 func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 	authnRequest := &etree.Element{
 		Space: "samlp",
@@ -33,11 +35,15 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 	nameIdPolicy.CreateAttr("AllowCreate", "true")
 	nameIdPolicy.CreateAttr("Format", sp.NameIdFormat)
 
-	requestedAuthnContext := authnRequest.CreateElement("samlp:RequestedAuthnContext")
-	requestedAuthnContext.CreateAttr("Comparison", "exact")
+	if sp.RequestedAuthnContext != nil {
+		requestedAuthnContext := authnRequest.CreateElement("samlp:RequestedAuthnContext")
+		requestedAuthnContext.CreateAttr("Comparison", sp.RequestedAuthnContext.Comparison)
 
-	authnContextClassRef := requestedAuthnContext.CreateElement("saml:AuthnContextClassRef")
-	authnContextClassRef.SetText("urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport")
+		for _, context := range sp.RequestedAuthnContext.Contexts {
+			authnContextClassRef := requestedAuthnContext.CreateElement("saml:AuthnContextClassRef")
+			authnContextClassRef.SetText(context)
+		}
+	}
 
 	doc := etree.NewDocument()
 

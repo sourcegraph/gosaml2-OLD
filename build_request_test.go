@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/beevik/etree"
 	"github.com/stretchr/testify/require"
 )
 
@@ -61,4 +62,56 @@ func TestRedirect(t *testing.T) {
 
 	//Require that the destination is the same as the redirected URL, except params
 	require.Equal(t, fmt.Sprintf("%s://%s%s", u.Scheme, u.Host, u.Path), dst.String())
+}
+
+func TestRequestedAuthnContextOmitted(t *testing.T) {
+	spURL := "https://sp.test"
+	sp := SAMLServiceProvider{
+		AssertionConsumerServiceURL: spURL,
+		AudienceURI:                 spURL,
+		IdentityProviderIssuer:      spURL,
+		IdentityProviderSSOURL:      "https://idp.test/saml/sso",
+		SignAuthnRequests:           false,
+	}
+
+	request, err := sp.BuildAuthRequest()
+	require.NoError(t, err)
+
+	doc := etree.NewDocument()
+	err = doc.ReadFromString(request)
+	require.NoError(t, err)
+
+	el := doc.FindElement("./AuthnRequest/RequestedAuthnContext")
+	require.Nil(t, el)
+}
+
+func TestRequestedAuthnContextIncluded(t *testing.T) {
+	spURL := "https://sp.test"
+	sp := SAMLServiceProvider{
+		AssertionConsumerServiceURL: spURL,
+		AudienceURI:                 spURL,
+		IdentityProviderIssuer:      spURL,
+		IdentityProviderSSOURL:      "https://idp.test/saml/sso",
+		RequestedAuthnContext: &RequestedAuthnContext{
+			Comparison: AuthnPolicyMatchExact,
+			Contexts: []string{
+				AuthnContextPasswordProtectedTransport,
+			},
+		},
+		SignAuthnRequests: false,
+	}
+
+	request, err := sp.BuildAuthRequest()
+	require.NoError(t, err)
+
+	doc := etree.NewDocument()
+	err = doc.ReadFromString(request)
+	require.NoError(t, err)
+
+	el := doc.FindElement("./AuthnRequest/RequestedAuthnContext")
+	require.Equal(t, el.SelectAttrValue("Comparison", ""), "exact")
+	require.Len(t, el.ChildElements(), 1)
+	el = el.ChildElements()[0]
+	require.Equal(t, el.Tag, "AuthnContextClassRef")
+	require.Equal(t, el.Text(), AuthnContextPasswordProtectedTransport)
 }

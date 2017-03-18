@@ -2,9 +2,11 @@ package saml2
 
 import (
 	"bytes"
+	"compress/flate"
 	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/beevik/etree"
 	dsig "github.com/russellhaering/goxmldsig"
@@ -69,6 +71,13 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 
 	doc := etree.NewDocument()
 	err = doc.ReadFromBytes(raw)
+	if err != nil {
+		// Attempt to inflate the response in case it happens to be compressed (as with one case at saml.oktadev.com)
+		buf, flateErr := ioutil.ReadAll(flate.NewReader(bytes.NewReader(raw)))
+		if flateErr == nil {
+			err = doc.ReadFromBytes(buf)
+		}
+	}
 	if err != nil {
 		return nil, err
 	}

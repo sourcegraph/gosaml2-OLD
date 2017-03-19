@@ -12,7 +12,11 @@ func ExerciseProviderTestScenarios(t *testing.T, scenarios []ProviderTestScenari
 	for _, scenario := range scenarios {
 		t.Run(scenario.ScenarioName, func(t *testing.T) {
 			_, err := scenario.ServiceProvider.RetrieveAssertionInfo(scenario.Response)
-			require.NoError(t, err)
+			if scenario.CheckError != nil {
+				scenario.CheckError(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"io/ioutil"
+	"testing"
 
 	"github.com/russellhaering/gosaml2"
 	"github.com/russellhaering/goxmldsig"
@@ -44,4 +45,5 @@ type ProviderTestScenario struct {
 	ScenarioName    string
 	Response        string
 	ServiceProvider *saml2.SAMLServiceProvider
+	CheckError      func(*testing.T, error)
 }

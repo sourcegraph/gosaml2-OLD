@@ -8,6 +8,7 @@ import (
 
 	"github.com/beevik/etree"
 	dsig "github.com/russellhaering/goxmldsig"
+	"github.com/russellhaering/goxmldsig/etreeutils"
 )
 
 func (sp *SAMLServiceProvider) validationContext() *dsig.ValidationContext {
@@ -88,7 +89,11 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 			// Unfortunately we just blew away our Response
 			response = doc.Root()
 
-			unverifiedAssertion := response.FindElement(AssertionTag)
+			unverifiedAssertion, err := etreeutils.NSSelectOne(response, SAMLAssertionNamespace, AssertionTag)
+			if err != nil {
+				return nil, err
+			}
+
 			if unverifiedAssertion == nil {
 				return nil, ErrMissingAssertion
 			}

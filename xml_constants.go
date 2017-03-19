@@ -42,3 +42,8 @@ const (
 	AuthnPolicyMatchMaximum = "maximum"
 	AuthnPolicyMatchBetter  = "better"
 )
+
+const (
+	SAMLAssertionNamespace = "urn:oasis:names:tc:SAML:2.0:assertion"
+	SAMLProtocolNamespace  = "urn:oasis:names:tc:SAML:2.0:protocol"
+)

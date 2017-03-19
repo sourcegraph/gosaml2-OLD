@@ -18,6 +18,13 @@ func signResponse(t *testing.T, resp string, sp *SAMLServiceProvider) string {
 
 	el := doc.Root()
 
+	// Strip existing signatures
+	signatures := el.FindElements("//Signature")
+	for _, sig := range signatures {
+		parent := sig.Parent()
+		parent.RemoveChild(sig)
+	}
+
 	el, err = sp.SigningContext().SignEnveloped(el)
 	require.NoError(t, err)
 

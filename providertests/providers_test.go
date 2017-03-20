@@ -4,12 +4,9 @@ import (
 	"testing"
 	"time"
 
-	"crypto/rsa"
-
 	"github.com/jonboulle/clockwork"
 	"github.com/russellhaering/gosaml2"
 	"github.com/russellhaering/goxmldsig"
-	"github.com/stretchr/testify/require"
 )
 
 func TestValidateResponses(t *testing.T) {
@@ -61,17 +58,8 @@ func TestValidateResponses(t *testing.T) {
 				AssertionConsumerServiceURL: "http://127.0.0.1:5556/callback",
 				IDPCertificateStore:         LoadCertificateStore("./testdata/oam_cert.pem"),
 				SkipSignatureValidation:     false,
-				AllowMissingAttributes:      false,
+				AllowMissingAttributes:      true,
 				Clock: dsig.NewFakeClock(clockwork.NewFakeClockAt(time.Date(2016, 12, 12, 00, 00, 0, 0, time.UTC))),
-			},
-
-			// This test case currently isn't totally successful - signature verification fails.
-			// It may be that the response wasn't signed with this certificate, or perhaps there
-			// is another issue in our implementation.
-			CheckError: func(t *testing.T, err error) {
-				require.IsType(t, saml2.ErrVerification{}, err)
-				ev := err.(saml2.ErrVerification)
-				require.Equal(t, ev.Cause, rsa.ErrVerification)
 			},
 		},
 	}

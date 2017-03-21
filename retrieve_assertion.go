@@ -14,6 +14,14 @@ type ErrMissingElement struct {
 	Tag, Attribute string
 }
 
+type ErrVerification struct {
+	Cause error
+}
+
+func (e ErrVerification) Error() string {
+	return fmt.Sprintf("error validating response: %s", e.Cause.Error())
+}
+
 //ErrMissingAssertion indicates that an appropriate assertion element could not
 //be found in the SAML Response
 var (
@@ -34,7 +42,7 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 
 	el, err := sp.ValidateEncodedResponse(encodedResponse)
 	if err != nil {
-		return nil, fmt.Errorf("error validating response: %v", err)
+		return nil, ErrVerification{Cause: err}
 	}
 
 	assertionElement := el.FindElement(AssertionTag)

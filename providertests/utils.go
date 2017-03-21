@@ -9,7 +9,6 @@ import (
 
 	"github.com/russellhaering/gosaml2"
 	"github.com/russellhaering/goxmldsig"
-	"github.com/stretchr/testify/require"
 )
 
 func LoadXMLResponse(path string) string {
@@ -46,13 +45,5 @@ type ProviderTestScenario struct {
 	ScenarioName    string
 	Response        string
 	ServiceProvider *saml2.SAMLServiceProvider
-}
-
-func ExerciseProviderTestScenarios(t *testing.T, scenarios []ProviderTestScenario) {
-	for _, scenario := range scenarios {
-		t.Run(scenario.ScenarioName, func(t *testing.T) {
-			_, err := scenario.ServiceProvider.RetrieveAssertionInfo(scenario.Response)
-			require.NoError(t, err)
-		})
-	}
+	CheckError      func(*testing.T, error)
 }

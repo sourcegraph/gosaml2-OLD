@@ -34,4 +34,16 @@ const (
 	NameIdFormatEmailAddress    = "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress"
 	NameIdFormatUnspecified     = "urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified"
 	NameIdFormatX509SubjectName = "urn:oasis:names:tc:SAML:1.1:nameid-format:x509SubjectName"
+
+	AuthnContextPasswordProtectedTransport = "urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport"
+
+	AuthnPolicyMatchExact   = "exact"
+	AuthnPolicyMatchMinimum = "minimum"
+	AuthnPolicyMatchMaximum = "maximum"
+	AuthnPolicyMatchBetter  = "better"
+)
+
+const (
+	SAMLAssertionNamespace = "urn:oasis:names:tc:SAML:2.0:assertion"
+	SAMLProtocolNamespace  = "urn:oasis:names:tc:SAML:2.0:protocol"
 )

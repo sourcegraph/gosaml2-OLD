@@ -6,7 +6,9 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 	"testing"
+	"time"
 
+	"github.com/jonboulle/clockwork"
 	"github.com/russellhaering/goxmldsig"
 	"github.com/stretchr/testify/require"
 )
@@ -34,6 +36,27 @@ CQ1CF8ZDDJ0XV6Ab
 -----END CERTIFICATE-----
 `
 
+const oktaCert = `
+-----BEGIN CERTIFICATE-----
+MIIDPDCCAiQCCQDydJgOlszqbzANBgkqhkiG9w0BAQUFADBgMQswCQYDVQQGEwJVUzETMB
+EGA1UECBMKQ2FsaWZvcm5pYTEWMBQGA1UEBxMNU2FuIEZyYW5jaXNjbzEQMA4GA1UEChMH
+SmFua3lDbzESMBAGA1UEAxMJbG9jYWxob3N0MB4XDTE0MDMxMjE5NDYzM1oXDTI3MTExOT
+E5NDYzM1owYDELMAkGA1UEBhMCVVMxEzARBgNVBAgTCkNhbGlmb3JuaWExFjAUBgNVBAcT
+DVNhbiBGcmFuY2lzY28xEDAOBgNVBAoTB0phbmt5Q28xEjAQBgNVBAMTCWxvY2FsaG9zdD
+CCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAMGvJpRTTasRUSPqcbqCG+ZnTAur
+nu0vVpIG9lzExnh11o/BGmzu7lB+yLHcEdwrKBBmpepDBPCYxpVajvuEhZdKFx/Fdy6j5m
+H3rrW0Bh/zd36CoUNjbbhHyTjeM7FN2yF3u9lcyubuvOzr3B3gX66IwJlU46+wzcQVhSOl
+Mk2tXR+fIKQExFrOuK9tbX3JIBUqItpI+HnAow509CnM134svw8PTFLkR6/CcMqnDfDK1m
+993PyoC1Y+N4X9XkhSmEQoAlAHPI5LHrvuujM13nvtoVYvKYoj7ScgumkpWNEvX652LfXO
+nKYlkB8ZybuxmFfIkzedQrbJsyOhfL03cMECAwEAATANBgkqhkiG9w0BAQUFAAOCAQEAeH
+wzqwnzGEkxjzSD47imXaTqtYyETZow7XwBc0ZaFS50qRFJUgKTAmKS1xQBP/qHpStsROT3
+5DUxJAE6NY1Kbq3ZbCuhGoSlY0L7VzVT5tpu4EY8+Dq/u2EjRmmhoL7UkskvIZ2n1DdERt
+d+YUMTeqYl9co43csZwDno/IKomeN5qaPc39IZjikJ+nUC6kPFKeu/3j9rgHNlRtocI6S1
+FdtFz9OZMQlpr0JbUt2T3xS/YoQJn6coDmJL5GTiiKM6cOe+Ur1VwzS1JEDbSS2TWWhzq8
+ojLdrotYLGd9JOsoQhElmz+tMfCFQUFLExinPAyy7YHlSiVX13QH2XTu/iQQ==
+-----END CERTIFICATE-----
+`
+
 func TestEncryptedAssertion(t *testing.T) {
 	var err error
 	cert, err := tls.LoadX509KeyPair("./testdata/test.crt", "./testdata/test.key")
@@ -54,6 +77,28 @@ func TestEncryptedAssertion(t *testing.T) {
 
 	bs, err := ioutil.ReadFile("./testdata/saml.post")
 	require.NoError(t, err, "couldn't read post")
+
+	_, err = sp.RetrieveAssertionInfo(string(bs))
+	require.NoError(t, err, "Assertion info should be retrieved with no error")
+}
+
+func TestCompressedResponse(t *testing.T) {
+	bs, err := ioutil.ReadFile("./testdata/saml_compressed.post")
+	require.NoError(t, err, "couldn't read compressed post")
+
+	block, _ := pem.Decode([]byte(oktaCert))
+
+	idpCert, err := x509.ParseCertificate(block.Bytes)
+	require.NoError(t, err, "couldn't parse okta cert pem block")
+
+	sp := SAMLServiceProvider{
+		AssertionConsumerServiceURL: "https://f1f51ddc.ngrok.io/api/sso/saml2/acs/58cafd0573d4f375b8e70e8e",
+		SPKeyStore:                  dsig.TLSCertKeyStore(cert),
+		IDPCertificateStore: &dsig.MemoryX509CertificateStore{
+			Roots: []*x509.Certificate{idpCert},
+		},
+		Clock: dsig.NewFakeClock(clockwork.NewFakeClockAt(time.Date(2017, 3, 17, 20, 00, 0, 0, time.UTC))),
+	}
 
 	_, err = sp.RetrieveAssertionInfo(string(bs))
 	require.NoError(t, err, "Assertion info should be retrieved with no error")

@@ -84,10 +84,6 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 	}
 
 	response := doc.Root()
-	err = sp.validateResponseAttributes(response)
-	if err != nil {
-		return nil, err
-	}
 
 	if !sp.SkipSignatureValidation {
 		response, err = sp.validationContext().Validate(response)
@@ -98,35 +94,36 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 			// Unfortunately we just blew away our Response
 			response = doc.Root()
 
-			unverifiedAssertion, err := etreeutils.NSSelectOne(response, SAMLAssertionNamespace, AssertionTag)
-			if err != nil {
-				return nil, err
-			}
+			etreeutils.NSFindIterate(response, SAMLAssertionNamespace, AssertionTag,
+				func(ctx etreeutils.NSContext, unverifiedAssertion *etree.Element) error {
+					// Skip any Assertion which isn't a child of the Response
+					if unverifiedAssertion.Parent() != response {
+						return nil
+					}
 
-			if unverifiedAssertion == nil {
-				return nil, ErrMissingAssertion
-			}
+					detatched, err := etreeutils.NSDetatch(ctx, unverifiedAssertion)
+					if err != nil {
+						return err
+					}
 
-			assertion, err := sp.validationContext().Validate(unverifiedAssertion)
-			if err != nil {
-				return nil, err
-			}
+					assertion, err := sp.validationContext().Validate(detatched)
+					if err != nil {
+						return err
+					}
 
-			// Because the top level response wasn't signed, we don't trust it
-			// or any of its children - except the signed assertions as returned
-			// by the signature validation. Make a copy of the response (to avoid mutating
-			// the original document) and strip all of its children, then re-add only
-			// the validated assertion.
-			//
-			// Note that we're leaving attributes of the Response in place. Since we're
-			// processing an unsigned Response they can't be trusted, but we'll validate
-			// them anyway.
-			response = response.Copy()
-			for _, el := range response.ChildElements() {
-				response.RemoveChild(el)
-			}
+					// Replace the original unverified Assertion with the verified one. Note that
+					// at this point only the Assertion (and not the parent Response) can be trusted
+					// as having been signed by the IdP.
+					if response.RemoveChild(unverifiedAssertion) == nil {
+						// Out of an abundance of caution, check to make sure an Assertion was actually
+						// removed. If it wasn't a programming error has occurred.
+						panic("unable to remove assertion")
+					}
 
-			response.AddChild(assertion)
+					response.AddChild(assertion)
+
+					return nil
+				})
 		} else if err != nil || response == nil {
 			return nil, err
 		}

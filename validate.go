@@ -125,7 +125,10 @@ func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertionElement, condi
 //Validate ensures that the assertion passed is valid for the current Service
 //Provider.
 func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
-	el = el.Copy()
+	err := sp.validateResponseAttributes(el)
+	if err != nil {
+		return err
+	}
 
 	assertionElement := el.FindElement(AssertionTag)
 	if assertionElement == nil {

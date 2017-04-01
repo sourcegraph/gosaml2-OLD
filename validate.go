@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/beevik/etree"
+	"github.com/russellhaering/gosaml2/types"
 )
 
 //ErrParsing indicates that the value present in an assertion could not be
@@ -124,68 +125,61 @@ func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertionElement, condi
 
 //Validate ensures that the assertion passed is valid for the current Service
 //Provider.
-func (sp *SAMLServiceProvider) Validate(el *etree.Element) error {
-	err := sp.validateResponseAttributes(el)
+func (sp *SAMLServiceProvider) Validate(response *types.Response) error {
+	err := sp.validateResponseAttributes(response)
 	if err != nil {
 		return err
 	}
 
-	assertionElement := el.FindElement(AssertionTag)
-	if assertionElement == nil {
+	if len(response.Assertions) == 0 {
 		return ErrMissingAssertion
 	}
 
-	subjectStatement := assertionElement.FindElement(childPath(assertionElement.Space, SubjectTag))
-	if subjectStatement == nil {
-		return ErrMissingElement{Tag: SubjectTag}
-	}
-
-	subjectConfirmationStatement := subjectStatement.FindElement(childPath(assertionElement.Space, SubjectConfirmationTag))
-	if subjectConfirmationStatement == nil {
-		return ErrMissingElement{Tag: SubjectConfirmationTag}
-	}
-
-	methodAttr := subjectConfirmationStatement.SelectAttr(MethodAttr)
-	if methodAttr.Value != SubjMethodBearer {
-		return ErrInvalidValue{
-			Reason:   ReasonUnsupported,
-			Key:      SubjectConfirmationTag,
-			Expected: SubjMethodBearer,
-			Actual:   methodAttr.Value,
+	for _, assertion := range response.Assertions {
+		subject := assertion.Subject
+		if subject == nil {
+			return ErrMissingElement{Tag: SubjectTag}
 		}
-	}
 
-	subjectConfirmationDataStatement := subjectConfirmationStatement.FindElement(childPath(assertionElement.Space, SubjectConfirmationDataTag))
-	if subjectConfirmationDataStatement == nil {
-		return ErrMissingElement{Tag: SubjectConfirmationDataTag}
-	}
-
-	recipientAttr := subjectConfirmationDataStatement.SelectAttr(RecipientAttr)
-	if recipientAttr == nil {
-		return ErrMissingElement{Tag: SubjectConfirmationTag, Attribute: RecipientAttr}
-	}
-	if recipientAttr.Value != sp.AssertionConsumerServiceURL {
-		return ErrInvalidValue{
-			Key:      RecipientAttr,
-			Expected: sp.AssertionConsumerServiceURL,
-			Actual:   recipientAttr.Value,
+		subjectConfirmation := subject.SubjectConfirmation
+		if subjectConfirmation == nil {
+			return ErrMissingElement{Tag: SubjectConfirmationTag}
 		}
-	}
 
-	notOnOrAfterAttr := subjectConfirmationDataStatement.SelectAttr(NotOnOrAfterAttr)
-	if notOnOrAfterAttr != nil {
-		after, err := time.Parse(time.RFC3339, notOnOrAfterAttr.Value)
+		if subjectConfirmation.Method != SubjMethodBearer {
+			return ErrInvalidValue{
+				Reason:   ReasonUnsupported,
+				Key:      SubjectConfirmationTag,
+				Expected: SubjMethodBearer,
+				Actual:   subjectConfirmation.Method,
+			}
+		}
+
+		subjectConfirmationData := subjectConfirmation.SubjectConfirmationData
+		if subjectConfirmationData == nil {
+			return ErrMissingElement{Tag: SubjectConfirmationDataTag}
+		}
+
+		if subjectConfirmationData.Recipient != sp.AssertionConsumerServiceURL {
+			return ErrInvalidValue{
+				Key:      RecipientAttr,
+				Expected: sp.AssertionConsumerServiceURL,
+				Actual:   subjectConfirmationData.Recipient,
+			}
+		}
+
+		notOnOrAfter, err := time.Parse(time.RFC3339, subjectConfirmationData.NotOnOrAfter)
 		if err != nil {
-			return ErrParsing{Tag: NotOnOrAfterAttr, Value: notOnOrAfterAttr.Value, Type: "time.RFC3339"}
+			return ErrParsing{Tag: NotOnOrAfterAttr, Value: subjectConfirmationData.NotOnOrAfter, Type: "time.RFC3339"}
 		}
-		now := sp.Clock.Now()
 
-		if now.After(after) {
+		now := sp.Clock.Now()
+		if now.After(notOnOrAfter) {
 			return ErrInvalidValue{
 				Reason:   ReasonExpired,
 				Key:      NotOnOrAfterAttr,
 				Expected: now.Format(time.RFC3339),
-				Actual:   notOnOrAfterAttr.Value,
+				Actual:   subjectConfirmationData.NotOnOrAfter,
 			}
 		}
 	}

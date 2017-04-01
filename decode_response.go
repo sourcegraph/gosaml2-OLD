@@ -8,7 +8,10 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"encoding/xml"
+
 	"github.com/beevik/etree"
+	"github.com/russellhaering/gosaml2/types"
 	dsig "github.com/russellhaering/goxmldsig"
 	"github.com/russellhaering/goxmldsig/etreeutils"
 )
@@ -21,40 +24,21 @@ func (sp *SAMLServiceProvider) validationContext() *dsig.ValidationContext {
 
 // validateResponseAttributes validates a SAML Response's tag and attributes. It does
 // not inspect child elements of the Response at all.
-func (sp *SAMLServiceProvider) validateResponseAttributes(response *etree.Element) error {
-	if response.Tag != ResponseTag {
-		return ErrMissingElement{
-			Tag: ResponseTag,
-		}
-	}
-
-	destinationAttr := response.SelectAttr(DestinationAttr)
-	if destinationAttr == nil {
-		return ErrMissingElement{Tag: DestinationAttr}
-	}
-
-	if destinationAttr.Value != sp.AssertionConsumerServiceURL {
+func (sp *SAMLServiceProvider) validateResponseAttributes(response *types.Response) error {
+	if response.Destination != sp.AssertionConsumerServiceURL {
 		return ErrInvalidValue{
 			Key:      DestinationAttr,
 			Expected: sp.AssertionConsumerServiceURL,
-			Actual:   destinationAttr.Value,
+			Actual:   response.Destination,
 		}
 	}
 
-	versionAttr := response.SelectAttr(VersionAttr)
-	if versionAttr == nil {
-		return ErrMissingElement{
-			Tag:       response.Tag,
-			Attribute: VersionAttr,
-		}
-	}
-
-	if versionAttr.Value != "2.0" {
+	if response.Version != "2.0" {
 		return ErrInvalidValue{
 			Reason:   ReasonUnsupported,
 			Key:      "SAML version",
 			Expected: "2.0",
-			Actual:   versionAttr.Value,
+			Actual:   response.Version,
 		}
 	}
 
@@ -129,7 +113,21 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		}
 	}
 
-	err = sp.Validate(response)
+	decodedResponse := &types.Response{}
+
+	doc = etree.NewDocument()
+	doc.SetRoot(response)
+	data, err := doc.WriteToBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	err = xml.Unmarshal(data, decodedResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	err = sp.Validate(decodedResponse)
 	if err == nil {
 		//If there was no error, then return the response
 		return response, nil

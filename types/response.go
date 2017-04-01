@@ -5,12 +5,13 @@ import (
 )
 
 type Response struct {
-	XMLName     xml.Name    `xml:"urn:oasis:names:tc:SAML:2.0:protocol Response"`
-	Destination string      `xml:"Destination,attr"`
-	Version     string      `xml:"Version,attr"`
-	Status      *Status     `xml:"Status"`
-	Issuer      *Issuer     `xml:"Issuer"`
-	Assertions  []Assertion `xml:"Assertion"`
+	XMLName             xml.Name             `xml:"urn:oasis:names:tc:SAML:2.0:protocol Response"`
+	Destination         string               `xml:"Destination,attr"`
+	Version             string               `xml:"Version,attr"`
+	Status              *Status              `xml:"Status"`
+	Issuer              *Issuer              `xml:"Issuer"`
+	Assertions          []Assertion          `xml:"Assertion"`
+	EncryptedAssertions []EncryptedAssertion `xml:"EncryptedAssertion"`
 }
 
 type Status struct {

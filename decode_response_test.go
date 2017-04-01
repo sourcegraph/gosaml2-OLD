@@ -73,6 +73,7 @@ func TestEncryptedAssertion(t *testing.T) {
 		IDPCertificateStore: &dsig.MemoryX509CertificateStore{
 			Roots: []*x509.Certificate{idpCert},
 		},
+		Clock: dsig.NewFakeClockAt(time.Date(2016, 04, 28, 22, 00, 00, 00, time.UTC)),
 	}
 
 	bs, err := ioutil.ReadFile("./testdata/saml.post")

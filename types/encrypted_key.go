@@ -1,4 +1,4 @@
-package saml2
+package types
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	"hash"
 )
@@ -54,9 +55,8 @@ const (
 )
 
 //DecryptSymmetricKey returns the private key contained in the EncryptedKey document
-func (ek *EncryptedKey) DecryptSymmetricKey(cert tls.Certificate) (cipher.Block, error) {
-
-	encCert, err := xmlBytes(ek.X509Data)
+func (ek *EncryptedKey) DecryptSymmetricKey(cert *tls.Certificate) (cipher.Block, error) {
+	encCert, err := base64.StdEncoding.DecodeString(ek.X509Data)
 	if err != nil {
 		return nil, fmt.Errorf("error getting certificate from encryptedkey: %v", err)
 	}
@@ -70,7 +70,7 @@ func (ek *EncryptedKey) DecryptSymmetricKey(cert tls.Certificate) (cipher.Block,
 			string(cert.Certificate[0]), string(encCert))
 	}
 
-	cipherText, err := xmlBytes(ek.CipherValue)
+	cipherText, err := base64.StdEncoding.DecodeString(ek.CipherValue)
 	if err != nil {
 		return nil, err
 	}

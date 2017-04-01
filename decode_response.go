@@ -45,6 +45,36 @@ func (sp *SAMLServiceProvider) validateResponseAttributes(response *types.Respon
 	return nil
 }
 
+func (sp *SAMLServiceProvider) getDecryptCert() (*tls.Certificate, error) {
+	if sp.SPKeyStore == nil {
+		return nil, fmt.Errorf("no decryption certs available")
+	}
+
+	//This is the tls.Certificate we'll use to decrypt any encrypted assertions
+	var decryptCert tls.Certificate
+
+	switch crt := sp.SPKeyStore.(type) {
+	case dsig.TLSCertKeyStore:
+		// Get the tls.Certificate directly if possible
+		decryptCert = tls.Certificate(crt)
+
+	default:
+
+		//Otherwise, construct one from the results of GetKeyPair
+		pk, cert, err := sp.SPKeyStore.GetKeyPair()
+		if err != nil {
+			return nil, fmt.Errorf("error getting keypair: %v", err)
+		}
+
+		decryptCert = tls.Certificate{
+			Certificate: [][]byte{cert},
+			PrivateKey:  pk,
+		}
+	}
+
+	return &decryptCert, nil
+}
+
 //ValidateEncodedResponse both decodes and validates, based on SP
 //configuration, an encoded, signed response. It will also appropriately
 //decrypt a response if the assertion was encrypted
@@ -127,62 +157,26 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		return nil, err
 	}
 
-	err = sp.Validate(decodedResponse)
-	if err == nil {
-		//If there was no error, then return the response
-		return response, nil
+	for _, ea := range decodedResponse.EncryptedAssertions {
+		decryptCert, err := sp.getDecryptCert()
+		if err != nil {
+			return nil, err
+		}
+
+		assertionData, err := ea.Decrypt(decryptCert)
+		assertion := types.Assertion{}
+		err = xml.Unmarshal(assertionData, &assertion)
+		if err != nil {
+			return nil, fmt.Errorf("Error decrypting assertion: %v", err)
+		}
+
+		decodedResponse.Assertions = append(decodedResponse.Assertions, assertion)
 	}
 
-	//If an error aside from missing assertion, return it.
-	if err != ErrMissingAssertion {
+	err = sp.Validate(decodedResponse)
+	if err != nil {
 		return nil, err
 	}
 
-	//If the error indicated a missing assertion, proceed to attempt decryption
-	//of encrypted assertion.
-	res, err := NewResponseFromReader(bytes.NewReader(raw))
-
-	if err != nil {
-		return nil, fmt.Errorf("Error getting response: %v", err)
-	}
-
-	//This is the tls.Certificate we'll use to decrypt
-	var decryptCert tls.Certificate
-
-	switch crt := sp.SPKeyStore.(type) {
-	case dsig.TLSCertKeyStore:
-		//Get the tls.Certificate directly if possible
-		decryptCert = tls.Certificate(crt)
-	default:
-		//Otherwise, construct one from the results of GetKeyPair
-		pk, cert, err := sp.SPKeyStore.GetKeyPair()
-		if err != nil {
-			return nil, fmt.Errorf("error getting keypair: %v", err)
-		}
-
-		decryptCert = tls.Certificate{
-			Certificate: [][]byte{cert},
-			PrivateKey:  pk,
-		}
-	}
-
-	//Decrypt the xml contents of the assertion
-	docBytes, err := res.Decrypt(decryptCert)
-
-	if err != nil {
-		return nil, fmt.Errorf("Error decrypting assertion: %v", err)
-	}
-
-	//Read the assertion and return it
-	resDoc := etree.NewDocument()
-	err = resDoc.ReadFromBytes(docBytes)
-
-	if err != nil {
-		return nil, fmt.Errorf("Error reading decrypted assertion: %v", err)
-	}
-
-	el := etree.NewElement("DecryptedAssertion")
-	el.AddChild(resDoc.Root())
-
-	return el, nil
+	return response, nil
 }

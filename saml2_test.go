@@ -5,10 +5,13 @@ import (
 	"crypto"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"testing"
+
+	"github.com/russellhaering/gosaml2/types"
 )
 
 var cert tls.Certificate
@@ -32,13 +35,16 @@ func TestDecode(t *testing.T) {
 	decoded := make([]byte, len(f))
 
 	base64.StdEncoding.Decode(decoded, f)
+	response := &types.Response{}
 
-	r, err := NewResponseFromReader(bytes.NewReader(decoded))
+	err = xml.Unmarshal(decoded, response)
 	if err != nil {
 		t.Fatalf("error decoding test saml: %v", err)
 	}
 
-	k, err := r.Key.DecryptSymmetricKey(cert)
+	ea := response.EncryptedAssertions[0]
+
+	k, err := ea.EncryptedKey.DecryptSymmetricKey(&cert)
 	if err != nil {
 		t.Fatalf("could not get symmetric key: %v\n", err)
 	}
@@ -47,7 +53,7 @@ func TestDecode(t *testing.T) {
 		t.Fatalf("no symmetric key")
 	}
 
-	bs, err := r.Decrypt(cert)
+	bs, err := ea.Decrypt(&cert)
 	if err != nil {
 		t.Fatalf("error decrypting saml data: %v\n", err)
 	}

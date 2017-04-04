@@ -121,6 +121,37 @@ func (sp *SAMLServiceProvider) Validate(response *types.Response) error {
 		return ErrMissingAssertion
 	}
 
+	issuer := response.Issuer
+	if issuer == nil {
+		return ErrMissingElement{Tag: IssuerTag}
+	}
+
+	if sp.IdentityProviderIssuer != "" && response.Issuer.Value != sp.IdentityProviderIssuer {
+		return ErrInvalidValue{
+			Key:      IssuerTag,
+			Expected: sp.IdentityProviderIssuer,
+			Actual:   response.Issuer.Value,
+		}
+	}
+
+	status := response.Status
+	if status == nil {
+		return ErrMissingElement{Tag: StatusTag}
+	}
+
+	statusCode := status.StatusCode
+	if statusCode == nil {
+		return ErrMissingElement{Tag: StatusCodeTag}
+	}
+
+	if statusCode.Value != StatusCodeSuccess {
+		return ErrInvalidValue{
+			Key:      StatusCodeTag,
+			Expected: StatusCodeSuccess,
+			Actual:   statusCode.Value,
+		}
+	}
+
 	for _, assertion := range response.Assertions {
 		subject := assertion.Subject
 		if subject == nil {

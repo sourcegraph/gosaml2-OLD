@@ -14,6 +14,9 @@ const (
 	AudienceTag                = "Audience"
 	OneTimeUseTag              = "OneTimeUse"
 	ProxyRestrictionTag        = "ProxyRestriction"
+	IssuerTag                  = "Issuer"
+	StatusTag                  = "Status"
+	StatusCodeTag              = "StatusCode"
 )
 
 const (
@@ -41,6 +44,8 @@ const (
 	AuthnPolicyMatchMinimum = "minimum"
 	AuthnPolicyMatchMaximum = "maximum"
 	AuthnPolicyMatchBetter  = "better"
+
+	StatusCodeSuccess = "urn:oasis:names:tc:SAML:2.0:status:Success"
 )
 
 const (

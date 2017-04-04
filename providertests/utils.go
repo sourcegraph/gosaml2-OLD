@@ -20,6 +20,15 @@ func LoadXMLResponse(path string) string {
 	return base64.StdEncoding.EncodeToString(xml)
 }
 
+func LoadRawResponse(path string) string {
+	data, err := ioutil.ReadFile(path)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(data)
+}
+
 func LoadCertificateStore(path string) dsig.X509CertificateStore {
 	encoded, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -42,8 +51,9 @@ func LoadCertificateStore(path string) dsig.X509CertificateStore {
 }
 
 type ProviderTestScenario struct {
-	ScenarioName    string
-	Response        string
-	ServiceProvider *saml2.SAMLServiceProvider
-	CheckError      func(*testing.T, error)
+	ScenarioName     string
+	Response         string
+	ServiceProvider  *saml2.SAMLServiceProvider
+	CheckError       func(*testing.T, error)
+	CheckWarningInfo func(*testing.T, *saml2.WarningInfo)
 }

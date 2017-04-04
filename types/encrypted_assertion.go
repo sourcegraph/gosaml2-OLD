@@ -16,8 +16,7 @@ type EncryptedAssertion struct {
 	CipherValue      string           `xml:"EncryptedData>CipherData>CipherValue"`
 }
 
-//Decrypt returns the byte slice contained in the encrypted data.
-func (ea *EncryptedAssertion) Decrypt(cert *tls.Certificate) ([]byte, error) {
+func (ea *EncryptedAssertion) decrypt(cert *tls.Certificate) ([]byte, error) {
 	data, err := base64.StdEncoding.DecodeString(ea.CipherValue)
 	if err != nil {
 		return nil, err
@@ -56,4 +55,18 @@ func (ea *EncryptedAssertion) Decrypt(cert *tls.Certificate) ([]byte, error) {
 	default:
 		return nil, fmt.Errorf("unknown symmetric encryption method %#v", ea.EncryptionMethod.Algorithm)
 	}
+}
+
+// Decrypt decrypts and unmarshals the EncryptedAssertion.
+func (ea *EncryptedAssertion) Decrypt(cert *tls.Certificate) (*Assertion, error) {
+	plaintext, err := ea.decrypt(cert)
+
+	assertion := &Assertion{}
+
+	err = xml.Unmarshal(plaintext, assertion)
+	if err != nil {
+		return nil, fmt.Errorf("Error decrypting assertion: %v", err)
+	}
+
+	return assertion, nil
 }

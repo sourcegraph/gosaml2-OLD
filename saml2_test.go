@@ -1,7 +1,6 @@
 package saml2
 
 import (
-	"bytes"
 	"crypto"
 	"crypto/tls"
 	"encoding/base64"
@@ -12,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/russellhaering/gosaml2/types"
+	"github.com/stretchr/testify/require"
 )
 
 var cert tls.Certificate
@@ -53,7 +53,7 @@ func TestDecode(t *testing.T) {
 		t.Fatalf("no symmetric key")
 	}
 
-	bs, err := ea.Decrypt(&cert)
+	assertion, err := ea.Decrypt(&cert)
 	if err != nil {
 		t.Fatalf("error decrypting saml data: %v\n", err)
 	}
@@ -63,7 +63,8 @@ func TestDecode(t *testing.T) {
 		t.Fatalf("could not read expected output")
 	}
 
-	if !bytes.Equal(f2, bs) {
-		t.Errorf("decrypted assertion did not match expectation")
-	}
+	expected := &types.Assertion{}
+	err = xml.Unmarshal(f2, expected)
+
+	require.EqualValues(t, expected, assertion, "decrypted assertion did not match expectation")
 }

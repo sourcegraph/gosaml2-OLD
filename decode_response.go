@@ -45,6 +45,24 @@ func (sp *SAMLServiceProvider) validateResponseAttributes(response *types.Respon
 	return nil
 }
 
+func (sp *SAMLServiceProvider) unmarshalResponse(el *etree.Element) (*types.Response, error) {
+	response := &types.Response{}
+
+	doc := etree.NewDocument()
+	doc.SetRoot(el)
+	data, err := doc.WriteToBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	err = xml.Unmarshal(data, response)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
 func (sp *SAMLServiceProvider) getDecryptCert() (*tls.Certificate, error) {
 	if sp.SPKeyStore == nil {
 		return nil, fmt.Errorf("no decryption certs available")
@@ -75,6 +93,61 @@ func (sp *SAMLServiceProvider) getDecryptCert() (*tls.Certificate, error) {
 	return &decryptCert, nil
 }
 
+func (sp *SAMLServiceProvider) decryptAssertions(response *types.Response) error {
+	for _, ea := range response.EncryptedAssertions {
+		decryptCert, err := sp.getDecryptCert()
+		if err != nil {
+			return err
+		}
+
+		assertion, err := ea.Decrypt(decryptCert)
+		if err != nil {
+			return err
+		}
+
+		response.Assertions = append(response.Assertions, *assertion)
+	}
+
+	return nil
+}
+
+func (sp *SAMLServiceProvider) validateElementSignature(el *etree.Element) (*etree.Element, error) {
+	return sp.validationContext().Validate(el)
+}
+
+func (sp *SAMLServiceProvider) validateAssertionSignatures(el *etree.Element) error {
+	validateAssertion := func(ctx etreeutils.NSContext, unverifiedAssertion *etree.Element) error {
+		if unverifiedAssertion.Parent() != el {
+			return fmt.Errorf("found assertion with unexpected parent element: %s", unverifiedAssertion.Parent().Tag)
+		}
+
+		detatched, err := etreeutils.NSDetatch(ctx, unverifiedAssertion)
+		if err != nil {
+			return err
+		}
+
+		assertion, err := sp.validationContext().Validate(detatched)
+		if err != nil {
+			return err
+		}
+
+		// Replace the original unverified Assertion with the verified one. Note that
+		// at this point only the Assertion (and not the parent Response) can be trusted
+		// as having been signed by the IdP.
+		if el.RemoveChild(unverifiedAssertion) == nil {
+			// Out of an abundance of caution, check to make sure an Assertion was actually
+			// removed. If it wasn't a programming error has occurred.
+			panic("unable to remove assertion")
+		}
+
+		el.AddChild(assertion)
+
+		return nil
+	}
+
+	return etreeutils.NSFindIterate(el, SAMLAssertionNamespace, AssertionTag, validateAssertion)
+}
+
 //ValidateEncodedResponse both decodes and validates, based on SP
 //configuration, an encoded, signed response. It will also appropriately
 //decrypt a response if the assertion was encrypted
@@ -97,80 +170,34 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		return nil, err
 	}
 
-	response := doc.Root()
+	el := doc.Root()
 
 	if !sp.SkipSignatureValidation {
-		response, err = sp.validationContext().Validate(response)
+		el, err = sp.validateElementSignature(el)
 		if err == dsig.ErrMissingSignature {
 			// The Response wasn't signed. It is possible that the Assertion inside of
 			// the Response was signed.
 
 			// Unfortunately we just blew away our Response
-			response = doc.Root()
+			el = doc.Root()
 
-			etreeutils.NSFindIterate(response, SAMLAssertionNamespace, AssertionTag,
-				func(ctx etreeutils.NSContext, unverifiedAssertion *etree.Element) error {
-					// Skip any Assertion which isn't a child of the Response
-					if unverifiedAssertion.Parent() != response {
-						return nil
-					}
-
-					detatched, err := etreeutils.NSDetatch(ctx, unverifiedAssertion)
-					if err != nil {
-						return err
-					}
-
-					assertion, err := sp.validationContext().Validate(detatched)
-					if err != nil {
-						return err
-					}
-
-					// Replace the original unverified Assertion with the verified one. Note that
-					// at this point only the Assertion (and not the parent Response) can be trusted
-					// as having been signed by the IdP.
-					if response.RemoveChild(unverifiedAssertion) == nil {
-						// Out of an abundance of caution, check to make sure an Assertion was actually
-						// removed. If it wasn't a programming error has occurred.
-						panic("unable to remove assertion")
-					}
-
-					response.AddChild(assertion)
-
-					return nil
-				})
-		} else if err != nil || response == nil {
+			err = sp.validateAssertionSignatures(el)
+			if err != nil {
+				return nil, err
+			}
+		} else if err != nil || el == nil {
 			return nil, err
 		}
 	}
 
-	decodedResponse := &types.Response{}
-
-	doc = etree.NewDocument()
-	doc.SetRoot(response)
-	data, err := doc.WriteToBytes()
+	decodedResponse, err := sp.unmarshalResponse(el)
 	if err != nil {
 		return nil, err
 	}
 
-	err = xml.Unmarshal(data, decodedResponse)
+	err = sp.decryptAssertions(decodedResponse)
 	if err != nil {
 		return nil, err
-	}
-
-	for _, ea := range decodedResponse.EncryptedAssertions {
-		decryptCert, err := sp.getDecryptCert()
-		if err != nil {
-			return nil, err
-		}
-
-		assertionData, err := ea.Decrypt(decryptCert)
-		assertion := types.Assertion{}
-		err = xml.Unmarshal(assertionData, &assertion)
-		if err != nil {
-			return nil, fmt.Errorf("Error decrypting assertion: %v", err)
-		}
-
-		decodedResponse.Assertions = append(decodedResponse.Assertions, assertion)
 	}
 
 	err = sp.Validate(decodedResponse)

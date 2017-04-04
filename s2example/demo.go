@@ -77,6 +77,16 @@ func main() {
 			return
 		}
 
+		if assertionInfo.WarningInfo.InvalidTime {
+			rw.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		if assertionInfo.WarningInfo.NotInAudience {
+			rw.WriteHeader(http.StatusForbidden)
+			return
+		}
+
 		fmt.Fprintf(rw, "NameID: %s\n", assertionInfo.NameID)
 
 		fmt.Fprintf(rw, "Assertions:\n")

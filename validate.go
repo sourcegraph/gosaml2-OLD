@@ -54,6 +54,10 @@ func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertion *types.Assert
 		return nil, ErrMissingElement{Tag: ConditionsTag}
 	}
 
+	if conditions.NotBefore == "" {
+		return nil, ErrMissingElement{Tag: ConditionsTag, Attribute: NotBeforeAttr}
+	}
+
 	notBefore, err := time.Parse(time.RFC3339, conditions.NotBefore)
 	if err != nil {
 		return nil, ErrParsing{Tag: NotBeforeAttr, Value: conditions.NotBefore, Type: "time.RFC3339"}
@@ -61,6 +65,10 @@ func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertion *types.Assert
 
 	if now.Before(notBefore) {
 		warningInfo.InvalidTime = true
+	}
+
+	if conditions.NotOnOrAfter == "" {
+		return nil, ErrMissingElement{Tag: ConditionsTag, Attribute: NotOnOrAfterAttr}
 	}
 
 	notOnOrAfter, err := time.Parse(time.RFC3339, conditions.NotOnOrAfter)
@@ -185,6 +193,10 @@ func (sp *SAMLServiceProvider) Validate(response *types.Response) error {
 			}
 		}
 
+		if subjectConfirmationData.NotOnOrAfter == "" {
+			return ErrMissingElement{Tag: SubjectConfirmationDataTag, Attribute: NotOnOrAfterAttr}
+		}
+
 		notOnOrAfter, err := time.Parse(time.RFC3339, subjectConfirmationData.NotOnOrAfter)
 		if err != nil {
 			return ErrParsing{Tag: NotOnOrAfterAttr, Value: subjectConfirmationData.NotOnOrAfter, Type: "time.RFC3339"}
@@ -199,6 +211,7 @@ func (sp *SAMLServiceProvider) Validate(response *types.Response) error {
 				Actual:   subjectConfirmationData.NotOnOrAfter,
 			}
 		}
+
 	}
 
 	return nil

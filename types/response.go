@@ -29,10 +29,11 @@ type Issuer struct {
 }
 
 type Assertion struct {
-	XMLName    xml.Name    `xml:"urn:oasis:names:tc:SAML:2.0:assertion Assertion"`
-	Issuer     *Issuer     `xml:"Issuer"`
-	Subject    *Subject    `xml:"Subject"`
-	Conditions *Conditions `xml:"Conditions"`
+	XMLName            xml.Name            `xml:"urn:oasis:names:tc:SAML:2.0:assertion Assertion"`
+	Issuer             *Issuer             `xml:"Issuer"`
+	Subject            *Subject            `xml:"Subject"`
+	Conditions         *Conditions         `xml:"Conditions"`
+	AttributeStatement *AttributeStatement `xml:"AttributeStatement"`
 }
 
 type Subject struct {
@@ -60,16 +61,49 @@ type SubjectConfirmationData struct {
 }
 
 type Conditions struct {
-	XMLName             xml.Name             `xml:"urn:oasis:names:tc:SAML:2.0:assertion Conditions"`
-	AudienceRestriction *AudienceRestriction `xml:"AudienceRestriction"`
+	XMLName              xml.Name              `xml:"urn:oasis:names:tc:SAML:2.0:assertion Conditions"`
+	NotBefore            string                `xml:"NotBefore,attr"`
+	NotOnOrAfter         string                `xml:"NotOnOrAfter,attr"`
+	AudienceRestrictions []AudienceRestriction `xml:"AudienceRestriction"`
+	OneTimeUse           *OneTimeUse           `xml:"OneTimeUse"`
+	ProxyRestriction     *ProxyRestriction     `xml:"ProxyRestriction"`
 }
 
 type AudienceRestriction struct {
-	XMLName  xml.Name  `xml:"urn:oasis:names:tc:SAML:2.0:assertion AudienceRestriction"`
-	Audience *Audience `xml:"Audience"`
+	XMLName   xml.Name   `xml:"urn:oasis:names:tc:SAML:2.0:assertion AudienceRestriction"`
+	Audiences []Audience `xml:"Audience"`
 }
 
 type Audience struct {
 	XMLName xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:assertion Audience"`
+	Value   string   `xml:",chardata"`
+}
+
+type OneTimeUse struct {
+	XMLName xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:assertion OneTimeUse"`
+}
+
+type ProxyRestriction struct {
+	XMLName  xml.Name   `xml:"urn:oasis:names:tc:SAML:2.0:assertion ProxyRestriction"`
+	Count    int        `xml:"Count,attr"`
+	Audience []Audience `xml:"Audience"`
+}
+
+type AttributeStatement struct {
+	XMLName    xml.Name    `xml:"urn:oasis:names:tc:SAML:2.0:assertion AttributeStatement"`
+	Attributes []Attribute `xml:"Attribute"`
+}
+
+type Attribute struct {
+	XMLName      xml.Name         `xml:"urn:oasis:names:tc:SAML:2.0:assertion Attribute"`
+	FriendlyName string           `xml:"FriendlyName,attr"`
+	Name         string           `xml:"Name,attr"`
+	NameFormat   string           `xml:"NameFormat,attr"`
+	Values       []AttributeValue `xml:"AttributeValue"`
+}
+
+type AttributeValue struct {
+	XMLName xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:assertion AttributeValue"`
+	Type    string   `xml:"xsi:type,attr"`
 	Value   string   `xml:",chardata"`
 }

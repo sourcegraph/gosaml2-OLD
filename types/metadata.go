@@ -35,10 +35,3 @@ type SingleSignOnService struct {
 	Binding  string   `xml:"Binding,attr"`
 	Location string   `xml:"Location,attr"`
 }
-
-type Attribute struct {
-	XMLName      xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:assertion Attribute"`
-	Name         string   `xml:"Name,attr"`
-	NameFormat   string   `xml:"NameFormat,attr"`
-	FriendlyName string   `xml:"FriendlyName,attr"`
-}

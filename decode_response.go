@@ -78,7 +78,7 @@ func (sp *SAMLServiceProvider) getDecryptCert() (*tls.Certificate, error) {
 //ValidateEncodedResponse both decodes and validates, based on SP
 //configuration, an encoded, signed response. It will also appropriately
 //decrypt a response if the assertion was encrypted
-func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (*etree.Element, error) {
+func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (*types.Response, error) {
 	raw, err := base64.StdEncoding.DecodeString(encodedResponse)
 	if err != nil {
 		return nil, err
@@ -178,5 +178,5 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		return nil, err
 	}
 
-	return response, nil
+	return decodedResponse, nil
 }

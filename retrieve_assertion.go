@@ -1,11 +1,6 @@
 package saml2
 
-import (
-	"encoding/xml"
-	"fmt"
-
-	"github.com/beevik/etree"
-)
+import "fmt"
 
 //ErrMissingElement is the error type that indicates an element and/or attribute is
 //missing. It provides a structured error that can be more appropriately acted
@@ -38,61 +33,52 @@ func (e ErrMissingElement) Error() string {
 //RetrieveAssertionInfo takes an encoded response and returns the AssertionInfo
 //contained, or an error message if an error has been encountered.
 func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*AssertionInfo, error) {
-	assertionInfo := &AssertionInfo{}
+	assertionInfo := &AssertionInfo{
+		Values: make(Values),
+	}
 
-	el, err := sp.ValidateEncodedResponse(encodedResponse)
+	response, err := sp.ValidateEncodedResponse(encodedResponse)
 	if err != nil {
 		return nil, ErrVerification{Cause: err}
 	}
 
-	assertionElement := el.FindElement(AssertionTag)
-	if assertionElement == nil {
+	// TODO: Support multiple assertions
+	if len(response.Assertions) == 0 {
 		return nil, ErrMissingAssertion
 	}
 
-	//Verify all conditions for the assertion
-	conditionsStatement := assertionElement.FindElement(childPath(assertionElement.Space, ConditionsTag))
-	if conditionsStatement == nil {
-		return nil, ErrMissingElement{Tag: ConditionsTag}
-	}
+	assertion := response.Assertions[0]
 
-	warningInfo, err := sp.VerifyAssertionConditions(assertionElement, conditionsStatement)
+	warningInfo, err := sp.VerifyAssertionConditions(&assertion)
 	if err != nil {
 		return nil, err
 	}
 
 	//Get the NameID
-	subjectStatement := assertionElement.FindElement(childPath(assertionElement.Space, SubjectTag))
-	if subjectStatement == nil {
+	subject := assertion.Subject
+	if subject == nil {
 		return nil, ErrMissingElement{Tag: SubjectTag}
 	}
 
-	nameIDStatement := subjectStatement.FindElement(childPath(assertionElement.Space, NameIdTag))
-	if nameIDStatement == nil {
+	nameID := subject.NameID
+	if nameID == nil {
 		return nil, ErrMissingElement{Tag: NameIdTag}
 	}
-	assertionInfo.NameID = nameIDStatement.Text()
+
+	assertionInfo.NameID = nameID.Value
 
 	//Get the actual assertion attributes
-	attributeStatement := assertionElement.FindElement(childPath(assertionElement.Space, AttributeStatementTag))
+	attributeStatement := assertion.AttributeStatement
 	if attributeStatement == nil && !sp.AllowMissingAttributes {
 		return nil, ErrMissingElement{Tag: AttributeStatementTag}
 	}
 
 	if attributeStatement != nil {
-		doc := etree.NewDocument()
-		doc.SetRoot(attributeStatement)
-		bs, err := doc.WriteToBytes()
-
-		if err != nil {
-			return nil, err
-		}
-
-		err = xml.Unmarshal(bs, &assertionInfo.Values)
-		if err != nil {
-			return nil, err
+		for _, attribute := range attributeStatement.Attributes {
+			assertionInfo.Values[attribute.Name] = attribute
 		}
 	}
+
 	assertionInfo.WarningInfo = warningInfo
 	return assertionInfo, nil
 }

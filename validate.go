@@ -2,10 +2,8 @@ package saml2
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
-	"github.com/beevik/etree"
 	"github.com/russellhaering/gosaml2/types"
 )
 
@@ -47,76 +45,64 @@ const (
 
 //VerifyAssertionConditions inspects an assertion element and makes sure that
 //all SAML2 contracts are upheld.
-func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertionElement, conditionsStatement *etree.Element) (*WarningInfo, error) {
+func (sp *SAMLServiceProvider) VerifyAssertionConditions(assertion *types.Assertion) (*WarningInfo, error) {
 	warningInfo := &WarningInfo{}
 	now := sp.Clock.Now()
 
-	notBeforeAttr := conditionsStatement.SelectAttr(NotBeforeAttr)
-	if notBeforeAttr != nil {
-		before, err := time.Parse(time.RFC3339, notBeforeAttr.Value)
-		if err != nil {
-			return nil, ErrParsing{Tag: NotBeforeAttr, Value: notBeforeAttr.Value, Type: "time.RFC3339"}
-		}
-
-		if now.Before(before) {
-			warningInfo.InvalidTime = true
-		}
-	}
-	notOnOrAfterAttr := conditionsStatement.SelectAttr(NotOnOrAfterAttr)
-	if notOnOrAfterAttr != nil {
-		after, err := time.Parse(time.RFC3339, notOnOrAfterAttr.Value)
-		if err != nil {
-			return nil, ErrParsing{Tag: NotOnOrAfterAttr, Value: notOnOrAfterAttr.Value, Type: "time.RFC3339"}
-		}
-		if now.After(after) {
-			warningInfo.InvalidTime = true
-		}
+	conditions := assertion.Conditions
+	if conditions == nil {
+		return nil, ErrMissingElement{Tag: ConditionsTag}
 	}
 
-	audienceRestrictionStatement := conditionsStatement.FindElement(childPath(assertionElement.Space, AudienceRestrictionTag))
-	if audienceRestrictionStatement != nil {
-		audienceStatements := audienceRestrictionStatement.FindElements(childPath(assertionElement.Space, AudienceTag))
-		if len(audienceStatements) == 0 {
-			return nil, ErrMissingElement{Tag: AudienceTag}
-		}
+	notBefore, err := time.Parse(time.RFC3339, conditions.NotBefore)
+	if err != nil {
+		return nil, ErrParsing{Tag: NotBeforeAttr, Value: conditions.NotBefore, Type: "time.RFC3339"}
+	}
 
+	if now.Before(notBefore) {
+		warningInfo.InvalidTime = true
+	}
+
+	notOnOrAfter, err := time.Parse(time.RFC3339, conditions.NotOnOrAfter)
+	if err != nil {
+		return nil, ErrParsing{Tag: NotOnOrAfterAttr, Value: conditions.NotOnOrAfter, Type: "time.RFC3339"}
+	}
+
+	if now.After(notOnOrAfter) {
+		warningInfo.InvalidTime = true
+	}
+
+	for _, audienceRestriction := range conditions.AudienceRestrictions {
 		matched := false
-		for _, audienceStatement := range audienceStatements {
-			if audienceStatement.Text() == sp.AudienceURI {
+
+		for _, audience := range audienceRestriction.Audiences {
+			if audience.Value == sp.AudienceURI {
 				matched = true
+				break
 			}
 		}
 
 		if !matched {
 			warningInfo.NotInAudience = true
+			break
 		}
 	}
 
-	oneTimeUseStatement := conditionsStatement.FindElement(childPath(assertionElement.Space, OneTimeUseTag))
-	if oneTimeUseStatement != nil {
+	if conditions.OneTimeUse != nil {
 		warningInfo.OneTimeUse = true
 	}
 
-	proxyRestrictionStatement := conditionsStatement.FindElement(childPath(assertionElement.Space, ProxyRestrictionTag))
-	if proxyRestrictionStatement != nil {
-		proxyRestrictionInfo := &ProxyRestriction{}
-		countAttr := proxyRestrictionStatement.SelectAttr(CountAttr)
-		if countAttr != nil {
-			count, err := strconv.Atoi(countAttr.Value)
-			if err != nil {
-				return nil, ErrParsing{Tag: ProxyRestrictionTag, Value: countAttr.Value, Type: "int"}
-			}
-
-			proxyRestrictionInfo.Count = count
+	proxyRestriction := conditions.ProxyRestriction
+	if proxyRestriction != nil {
+		proxyRestrictionInfo := &ProxyRestriction{
+			Count:    proxyRestriction.Count,
+			Audience: []string{},
 		}
 
-		proxyAudienceStatements := proxyRestrictionStatement.FindElements(childPath(assertionElement.Space, AudienceTag))
-		pas := make([]string, len(proxyAudienceStatements))
-		for i, proxyAudienceStatement := range proxyAudienceStatements {
-			pas[i] = proxyAudienceStatement.Text()
+		for _, audience := range proxyRestriction.Audience {
+			proxyRestrictionInfo.Audience = append(proxyRestrictionInfo.Audience, audience.Value)
 		}
 
-		proxyRestrictionInfo.Audience = pas
 		warningInfo.ProxyRestriction = proxyRestrictionInfo
 	}
 

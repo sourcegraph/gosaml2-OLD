@@ -79,10 +79,3 @@ type AssertionInfo struct {
 	Values      Values
 	WarningInfo *WarningInfo
 }
-
-func childPath(space, tag string) string {
-	if space == "" {
-		return "./" + tag
-	}
-	return "./" + space + ":" + tag
-}

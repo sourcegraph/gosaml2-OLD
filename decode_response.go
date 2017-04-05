@@ -161,13 +161,16 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 	err = doc.ReadFromBytes(raw)
 	if err != nil {
 		// Attempt to inflate the response in case it happens to be compressed (as with one case at saml.oktadev.com)
-		buf, flateErr := ioutil.ReadAll(flate.NewReader(bytes.NewReader(raw)))
-		if flateErr == nil {
-			err = doc.ReadFromBytes(buf)
+		buf, err := ioutil.ReadAll(flate.NewReader(bytes.NewReader(raw)))
+		if err != nil {
+			return nil, err
 		}
-	}
-	if err != nil {
-		return nil, err
+
+		doc = etree.NewDocument()
+		err = doc.ReadFromBytes(buf)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	el := doc.Root()

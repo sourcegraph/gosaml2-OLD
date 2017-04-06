@@ -173,6 +173,10 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		}
 	}
 
+	if doc.Root() == nil {
+		return nil, fmt.Errorf("unable to parse response")
+	}
+
 	el := doc.Root()
 
 	if !sp.SkipSignatureValidation {

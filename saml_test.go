@@ -3,8 +3,12 @@ package saml2
 import (
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"testing"
+
+	"bytes"
+	"compress/flate"
 
 	"github.com/beevik/etree"
 	"github.com/russellhaering/goxmldsig"
@@ -193,4 +197,54 @@ func TestSAML(t *testing.T) {
 	_, err = sp.ValidateEncodedResponse(base64.StdEncoding.EncodeToString([]byte(missingIDResponse)))
 	require.Error(t, err)
 	require.Equal(t, "Missing ID attribute", err.Error())
+}
+
+func TestInvalidResponseBadBase64(t *testing.T) {
+	sp := &SAMLServiceProvider{}
+
+	response, err := sp.ValidateEncodedResponse("invalid-base64")
+	require.EqualError(t, err, "illegal base64 data at input byte 7")
+	require.Nil(t, response)
+}
+
+func TestInvalidResponseBadCompression(t *testing.T) {
+	sp := &SAMLServiceProvider{}
+
+	// Value from: https://github.com/golang/go/blob/23416315060bf7601e5779c3a6a2529d4d604584/src/compress/flate/flate_test.go#L219
+	rawResponse, err := hex.DecodeString("33180700")
+	require.NoError(t, err)
+
+	b64Response := base64.StdEncoding.EncodeToString(rawResponse)
+
+	response, err := sp.ValidateEncodedResponse(b64Response)
+	require.EqualError(t, err, "flate: corrupt input before offset 3")
+	require.Nil(t, response)
+}
+
+func TestInvalidResponseBadXML(t *testing.T) {
+	sp := &SAMLServiceProvider{}
+
+	compressed := &bytes.Buffer{}
+
+	compressor, err := flate.NewWriter(compressed, flate.BestCompression)
+	require.NoError(t, err)
+
+	compressor.Write([]byte(">Definitely&Invalid XML"))
+	compressor.Close()
+
+	b64Response := base64.StdEncoding.EncodeToString(compressed.Bytes())
+
+	response, err := sp.ValidateEncodedResponse(b64Response)
+	require.EqualError(t, err, "XML syntax error on line 1: invalid character entity &Invalid (no semicolon)")
+	require.Nil(t, response)
+}
+
+func TestInvalidResponseNoElement(t *testing.T) {
+	sp := &SAMLServiceProvider{}
+
+	b64Response := base64.StdEncoding.EncodeToString([]byte("no-element-here"))
+
+	response, err := sp.ValidateEncodedResponse(b64Response)
+	require.EqualError(t, err, "unable to parse response")
+	require.Nil(t, response)
 }

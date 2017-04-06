@@ -29,7 +29,15 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 	authnRequest.CreateAttr("AssertionConsumerServiceURL", sp.AssertionConsumerServiceURL)
 	authnRequest.CreateAttr("IssueInstant", sp.Clock.Now().UTC().Format(issueInstantFormat))
 	authnRequest.CreateAttr("Destination", sp.IdentityProviderSSOURL)
-	authnRequest.CreateElement("saml:Issuer").SetText(sp.IdentityProviderIssuer)
+
+	// NOTE(russell_h): In earlier versions we mistakenly sent the IdentityProviderIssuer
+	// in the AuthnRequest. For backwards compatibility we will fall back to that
+	// behavior when ServiceProviderIssuer isn't set.
+	if sp.ServiceProviderIssuer != "" {
+		authnRequest.CreateElement("saml:Issuer").SetText(sp.ServiceProviderIssuer)
+	} else {
+		authnRequest.CreateElement("saml:Issuer").SetText(sp.IdentityProviderIssuer)
+	}
 
 	nameIdPolicy := authnRequest.CreateElement("samlp:NameIDPolicy")
 	nameIdPolicy.CreateAttr("AllowCreate", "true")

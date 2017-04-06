@@ -7,11 +7,14 @@ import (
 )
 
 type SAMLServiceProvider struct {
-	IdentityProviderSSOURL      string
-	IdentityProviderIssuer      string
+	IdentityProviderSSOURL string
+	IdentityProviderIssuer string
+
 	AssertionConsumerServiceURL string
-	SignAuthnRequests           bool
-	SignAuthnRequestsAlgorithm  string
+	ServiceProviderIssuer       string
+
+	SignAuthnRequests          bool
+	SignAuthnRequestsAlgorithm string
 
 	// RequestedAuthnContext allows service providers to require that the identity
 	// provider use specific authentication mechanisms. Leaving this unset will

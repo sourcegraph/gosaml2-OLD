@@ -7,7 +7,9 @@ import (
 )
 
 type EntityDescriptor struct {
-	XMLName          xml.Name         `xml:"urn:oasis:names:tc:SAML:2.0:metadata EntityDescriptor"`
+	XMLName xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:metadata EntityDescriptor"`
+	// SAML 2.0 8.3.6 Entity Identifier could be used to represent issuer
+	EntityID         string           `xml:"entityID,attr"`
 	IDPSSODescriptor IDPSSODescriptor `xml:"IDPSSODescriptor"`
 }
 

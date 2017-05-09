@@ -14,7 +14,7 @@ import (
 
 const issueInstantFormat = "2006-01-02T15:04:05Z"
 
-func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
+func (sp *SAMLServiceProvider) BuildAuthRequestDocument() (*etree.Document, error) {
 	authnRequest := &etree.Element{
 		Space: "samlp",
 		Tag:   "AuthnRequest",
@@ -59,31 +59,32 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 		ctx := sp.SigningContext()
 		signed, err := ctx.SignEnveloped(authnRequest)
 		if err != nil {
-			return "", err
+			return nil, err
 		}
 
 		doc.SetRoot(signed)
 	} else {
 		doc.SetRoot(authnRequest)
 	}
+	return doc, nil
+}
 
-	buf := &bytes.Buffer{}
-
-	_, err := doc.WriteTo(buf)
+// BuildAuthRequest builds <AuthnRequest> for identity provider
+func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
+	doc, err := sp.BuildAuthRequestDocument()
 	if err != nil {
 		return "", err
 	}
-
 	return doc.WriteToString()
 }
 
-func (sp *SAMLServiceProvider) BuildAuthURL(relayState string) (string, error) {
+func (sp *SAMLServiceProvider) BuildAuthURLFromDocument(relayState string, doc *etree.Document) (string, error) {
 	parsedUrl, err := url.Parse(sp.IdentityProviderSSOURL)
 	if err != nil {
 		return "", err
 	}
 
-	authnRequest, err := sp.BuildAuthRequest()
+	authnRequest, err := doc.WriteToString()
 	if err != nil {
 		return "", err
 	}
@@ -115,6 +116,15 @@ func (sp *SAMLServiceProvider) BuildAuthURL(relayState string) (string, error) {
 
 	parsedUrl.RawQuery = qs.Encode()
 	return parsedUrl.String(), nil
+}
+
+// BuildAuthURL builds redirect URL to be sent to principal
+func (sp *SAMLServiceProvider) BuildAuthURL(relayState string) (string, error) {
+	doc, err := sp.BuildAuthRequestDocument()
+	if err != nil {
+		return "", err
+	}
+	return sp.BuildAuthURLFromDocument(relayState, doc)
 }
 
 // AuthRedirect takes a ResponseWriter and Request from an http interaction and

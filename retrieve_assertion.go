@@ -79,6 +79,15 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 		}
 	}
 
+	if assertion.AuthnStatement != nil {
+		if assertion.AuthnStatement.AuthnInstant != nil {
+			assertionInfo.AuthnInstant = assertion.AuthnStatement.AuthnInstant
+		}
+		if assertion.AuthnStatement.SessionNotOnOrAfter != nil {
+			assertionInfo.SessionNotOnOrAfter = assertion.AuthnStatement.SessionNotOnOrAfter
+		}
+	}
+
 	assertionInfo.WarningInfo = warningInfo
 	return assertionInfo, nil
 }

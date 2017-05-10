@@ -2,6 +2,7 @@ package saml2
 
 import (
 	"sync"
+	"time"
 
 	dsig "github.com/russellhaering/goxmldsig"
 )
@@ -78,7 +79,9 @@ type WarningInfo struct {
 }
 
 type AssertionInfo struct {
-	NameID      string
-	Values      Values
-	WarningInfo *WarningInfo
+	NameID              string
+	Values              Values
+	WarningInfo         *WarningInfo
+	AuthnInstant        *time.Time
+	SessionNotOnOrAfter *time.Time
 }

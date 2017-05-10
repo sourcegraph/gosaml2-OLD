@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/xml"
+	"time"
 )
 
 type Response struct {
@@ -35,6 +36,7 @@ type Assertion struct {
 	Subject            *Subject            `xml:"Subject"`
 	Conditions         *Conditions         `xml:"Conditions"`
 	AttributeStatement *AttributeStatement `xml:"AttributeStatement"`
+	AuthnStatement     *AuthnStatement     `xml:"AuthnStatement"`
 }
 
 type Subject struct {
@@ -107,4 +109,10 @@ type AttributeValue struct {
 	XMLName xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:assertion AttributeValue"`
 	Type    string   `xml:"xsi:type,attr"`
 	Value   string   `xml:",chardata"`
+}
+
+type AuthnStatement struct {
+	XMLName             xml.Name   `xml:"AuthnStatement"`
+	AuthnInstant        *time.Time `xml:"AuthnInstant,attr,omitempty"`
+	SessionNotOnOrAfter *time.Time `xml:"SessionNotOnOrAfter,attr,omitempty"`
 }

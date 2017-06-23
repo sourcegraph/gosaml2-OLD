@@ -12,11 +12,11 @@ type EntityDescriptor struct {
 }
 
 type IDPSSODescriptor struct {
-	XMLName             xml.Name            `xml:"urn:oasis:names:tc:SAML:2.0:metadata IDPSSODescriptor"`
-	KeyDescriptors      []KeyDescriptor     `xml:"KeyDescriptor"`
-	NameIDFormats       []NameIDFormat      `xml:"NameIDFormat"`
-	SingleSignOnService SingleSignOnService `xml:"SingleSignOnService"`
-	Attributes          []Attribute         `xml:"Attribute"`
+	XMLName              xml.Name              `xml:"urn:oasis:names:tc:SAML:2.0:metadata IDPSSODescriptor"`
+	KeyDescriptors       []KeyDescriptor       `xml:"KeyDescriptor"`
+	NameIDFormats        []NameIDFormat        `xml:"NameIDFormat"`
+	SingleSignOnServices []SingleSignOnService `xml:"SingleSignOnService"`
+	Attributes           []Attribute           `xml:"Attribute"`
 }
 
 type KeyDescriptor struct {

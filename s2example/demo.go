@@ -55,7 +55,7 @@ func main() {
 	randomKeyStore := dsig.RandomKeyStoreForTest()
 
 	sp := &saml2.SAMLServiceProvider{
-		IdentityProviderSSOURL:      metadata.IDPSSODescriptor.SingleSignOnService.Location,
+		IdentityProviderSSOURL:      metadata.IDPSSODescriptor.SingleSignOnServices[0].Location,
 		IdentityProviderIssuer:      "http://example.com/saml/acs/example",
 		AssertionConsumerServiceURL: "http://localhost:8080/v1/_saml_callback",
 		SignAuthnRequests:           true,

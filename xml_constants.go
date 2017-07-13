@@ -46,6 +46,9 @@ const (
 	AuthnPolicyMatchBetter  = "better"
 
 	StatusCodeSuccess = "urn:oasis:names:tc:SAML:2.0:status:Success"
+
+	BindingHttpPost     = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+	BindingHttpRedirect = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
 )
 
 const (

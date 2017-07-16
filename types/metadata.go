@@ -40,11 +40,12 @@ type SPSSODescriptor struct {
 }
 
 type IDPSSODescriptor struct {
-	XMLName              xml.Name              `xml:"urn:oasis:names:tc:SAML:2.0:metadata IDPSSODescriptor"`
-	KeyDescriptors       []KeyDescriptor       `xml:"KeyDescriptor"`
-	NameIDFormats        []NameIDFormat        `xml:"NameIDFormat"`
-	SingleSignOnServices []SingleSignOnService `xml:"SingleSignOnService"`
-	Attributes           []Attribute           `xml:"Attribute"`
+	XMLName                 xml.Name              `xml:"urn:oasis:names:tc:SAML:2.0:metadata IDPSSODescriptor"`
+	WantAuthnRequestsSigned bool                  `xml:"WantAuthnRequestsSigned,attr"`
+	KeyDescriptors          []KeyDescriptor       `xml:"KeyDescriptor"`
+	NameIDFormats           []NameIDFormat        `xml:"NameIDFormat"`
+	SingleSignOnServices    []SingleSignOnService `xml:"SingleSignOnService"`
+	Attributes              []Attribute           `xml:"Attribute"`
 }
 
 type KeyDescriptor struct {

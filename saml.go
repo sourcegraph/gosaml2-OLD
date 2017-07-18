@@ -187,4 +187,5 @@ type AssertionInfo struct {
 	WarningInfo         *WarningInfo
 	AuthnInstant        *time.Time
 	SessionNotOnOrAfter *time.Time
+	Assertions          []types.Assertion
 }

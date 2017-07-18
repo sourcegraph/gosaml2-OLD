@@ -60,12 +60,15 @@ func (ea *EncryptedAssertion) decrypt(cert *tls.Certificate) ([]byte, error) {
 // Decrypt decrypts and unmarshals the EncryptedAssertion.
 func (ea *EncryptedAssertion) Decrypt(cert *tls.Certificate) (*Assertion, error) {
 	plaintext, err := ea.decrypt(cert)
+	if err != nil {
+		return nil, fmt.Errorf("Error decrypting assertion: %v", err)
+	}
 
 	assertion := &Assertion{}
 
 	err = xml.Unmarshal(plaintext, assertion)
 	if err != nil {
-		return nil, fmt.Errorf("Error decrypting assertion: %v", err)
+		return nil, fmt.Errorf("Error unmarshaling assertion: %v", err)
 	}
 
 	return assertion, nil

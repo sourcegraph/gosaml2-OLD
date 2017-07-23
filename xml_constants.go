@@ -3,6 +3,7 @@ package saml2
 const (
 	ResponseTag                = "Response"
 	AssertionTag               = "Assertion"
+	EncryptedAssertionTag      = "EncryptedAssertion"
 	SubjectTag                 = "Subject"
 	NameIdTag                  = "NameID"
 	SubjectConfirmationTag     = "SubjectConfirmation"

@@ -11,8 +11,10 @@ import (
 	"crypto/sha512"
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"hash"
+	"strings"
 )
 
 //EncryptedKey contains the decryption key data from the saml2 core and xmlenc
@@ -55,6 +57,23 @@ const (
 	MethodSHA512 = "http://www.w3.org/2000/09/xmldsig#sha512"
 )
 
+//SHA-1 is commonly used for certificate fingerprints (openssl -fingerprint and ADFS thumbprint).
+//SHA-1 is sufficient for our purposes here (error message).
+func debugKeyFp(keyBytes []byte) string {
+	hashFunc := sha1.New()
+	hashFunc.Write(keyBytes)
+	sum := strings.ToLower(hex.EncodeToString(hashFunc.Sum(nil)))
+	var ret string
+	for idx := 0; idx+1 < len(sum); idx += 2 {
+		if idx == 0 {
+			ret += sum[idx : idx+2]
+		} else {
+			ret += ":" + sum[idx:idx+2]
+		}
+	}
+	return ret
+}
+
 //DecryptSymmetricKey returns the private key contained in the EncryptedKey document
 func (ek *EncryptedKey) DecryptSymmetricKey(cert *tls.Certificate) (cipher.Block, error) {
 	encCert, err := base64.StdEncoding.DecodeString(ek.X509Data)
@@ -67,8 +86,8 @@ func (ek *EncryptedKey) DecryptSymmetricKey(cert *tls.Certificate) (cipher.Block
 	}
 
 	if !bytes.Equal(cert.Certificate[0], encCert) {
-		return nil, fmt.Errorf("key decryption attempted with mismatched cert: %#v != %#v",
-			string(cert.Certificate[0]), string(encCert))
+		return nil, fmt.Errorf("key decryption attempted with mismatched cert, SP cert(%.11s), assertion cert(%.11s)",
+			debugKeyFp(cert.Certificate[0]), debugKeyFp(encCert))
 	}
 
 	cipherText, err := base64.StdEncoding.DecodeString(ek.CipherValue)

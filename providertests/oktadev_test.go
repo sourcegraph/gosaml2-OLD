@@ -12,7 +12,7 @@ import (
 )
 
 var oktaScenarioErrors = map[int]string{
-	1:  "error validating response: Missing signature referencing the top-level element",
+	1:  "error validating response: response and/or assertions must be signed",
 	3:  "error validating response: Could not verify certificate against trusted certs",
 	4:  "error validating response: Unrecognized Destination value, Expected: http://dba9a5fc.ngrok.io/v1/_saml_callback, Actual: fake.identifier.example.com",
 	5:  "error validating response: Unrecognized Issuer value, Expected: http://example.com/saml/acs/example, Actual: fake.identifier.example.com",

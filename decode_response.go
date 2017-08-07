@@ -25,7 +25,7 @@ func (sp *SAMLServiceProvider) validationContext() *dsig.ValidationContext {
 // validateResponseAttributes validates a SAML Response's tag and attributes. It does
 // not inspect child elements of the Response at all.
 func (sp *SAMLServiceProvider) validateResponseAttributes(response *types.Response) error {
-	if response.Destination != sp.AssertionConsumerServiceURL {
+	if response.Destination != "" && response.Destination != sp.AssertionConsumerServiceURL {
 		return ErrInvalidValue{
 			Key:      DestinationAttr,
 			Expected: sp.AssertionConsumerServiceURL,

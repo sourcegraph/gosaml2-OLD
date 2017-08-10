@@ -60,6 +60,9 @@ const (
 //SHA-1 is commonly used for certificate fingerprints (openssl -fingerprint and ADFS thumbprint).
 //SHA-1 is sufficient for our purposes here (error message).
 func debugKeyFp(keyBytes []byte) string {
+	if len(keyBytes) < 1 {
+		return ""
+	}
 	hashFunc := sha1.New()
 	hashFunc.Write(keyBytes)
 	sum := strings.ToLower(hex.EncodeToString(hashFunc.Sum(nil)))

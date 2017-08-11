@@ -103,15 +103,22 @@ func (ek *EncryptedKey) DecryptSymmetricKey(cert *tls.Certificate) (cipher.Block
 		var h hash.Hash
 
 		switch ek.EncryptionMethod.DigestMethod.Algorithm {
+		case "":
+			return nil, fmt.Errorf("missing digest algorithm")
 		case MethodSHA1:
 			h = sha1.New()
 		case MethodSHA256:
 			h = sha256.New()
 		case MethodSHA512:
 			h = sha512.New()
+		default:
+			return nil, fmt.Errorf("unsupported digest algorithm: %v",
+				ek.EncryptionMethod.DigestMethod.Algorithm)
 		}
 
 		switch ek.EncryptionMethod.Algorithm {
+		case "":
+			return nil, fmt.Errorf("missing encryption algorithm")
 		case MethodRSAOAEP, MethodRSAOAEP2:
 			pt, err := rsa.DecryptOAEP(h, rand.Reader, pk, cipherText, nil)
 			if err != nil {

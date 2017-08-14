@@ -43,6 +43,7 @@ type SAMLServiceProvider struct {
 	SPKeyStore              dsig.X509KeyStore // Required encryption key, default signing key
 	SPSigningKeyStore       dsig.X509KeyStore // Optional signing key
 	NameIdFormat            string
+	ValidateEncryptionCert  bool
 	SkipSignatureValidation bool
 	AllowMissingAttributes  bool
 	Clock                   *dsig.Clock

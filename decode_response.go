@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/flate"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"io/ioutil"
@@ -84,6 +85,20 @@ func (sp *SAMLServiceProvider) getDecryptCert() (*tls.Certificate, error) {
 		decryptCert = tls.Certificate{
 			Certificate: [][]byte{cert},
 			PrivateKey:  pk,
+		}
+	}
+
+	if sp.ValidateEncryptionCert {
+		// Check Validity period of certificate
+		if len(decryptCert.Certificate) < 1 || len(decryptCert.Certificate[0]) < 1 {
+			return nil, fmt.Errorf("empty decryption cert")
+		} else if cert, err := x509.ParseCertificate(decryptCert.Certificate[0]); err != nil {
+			return nil, fmt.Errorf("invalid x509 decryption cert: %v", err)
+		} else {
+			now := sp.Clock.Now()
+			if now.Before(cert.NotBefore) || now.After(cert.NotAfter) {
+				return nil, fmt.Errorf("decryption cert is not valid at this time")
+			}
 		}
 	}
 

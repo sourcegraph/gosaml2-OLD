@@ -57,7 +57,7 @@ ojLdrotYLGd9JOsoQhElmz+tMfCFQUFLExinPAyy7YHlSiVX13QH2XTu/iQQ==
 -----END CERTIFICATE-----
 `
 
-func TestEncryptedAssertion(t *testing.T) {
+func testEncryptedAssertion(t *testing.T, validateEncryptionCert bool) {
 	var err error
 	cert, err := tls.LoadX509KeyPair("./testdata/test.crt", "./testdata/test.key")
 	require.NoError(t, err, "could not load x509 key pair")
@@ -70,6 +70,7 @@ func TestEncryptedAssertion(t *testing.T) {
 	sp := SAMLServiceProvider{
 		AssertionConsumerServiceURL: "https://saml2.test.astuart.co/sso/saml2",
 		SPKeyStore:                  dsig.TLSCertKeyStore(cert),
+		ValidateEncryptionCert:      validateEncryptionCert,
 		IDPCertificateStore: &dsig.MemoryX509CertificateStore{
 			Roots: []*x509.Certificate{idpCert},
 		},
@@ -80,7 +81,20 @@ func TestEncryptedAssertion(t *testing.T) {
 	require.NoError(t, err, "couldn't read post")
 
 	_, err = sp.RetrieveAssertionInfo(string(bs))
-	require.NoError(t, err, "Assertion info should be retrieved with no error")
+	if validateEncryptionCert {
+		require.Error(t, err)
+		require.Equal(t, "error validating response: unable to get decryption certificate: decryption cert is not valid at this time", err.Error())
+	} else {
+		require.NoError(t, err, "Assertion info should be retrieved with no error")
+	}
+}
+
+func TestEncryptedAssertion(t *testing.T) {
+	testEncryptedAssertion(t, false)
+}
+
+func TestEncryptedAssertionInvalidCert(t *testing.T) {
+	testEncryptedAssertion(t, true)
 }
 
 func TestCompressedResponse(t *testing.T) {

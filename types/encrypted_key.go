@@ -28,13 +28,13 @@ type EncryptedKey struct {
 
 //EncryptionMethod specifies the type of encryption that was used.
 type EncryptionMethod struct {
-	Algorithm    string `xml:",attr"`
-	DigestMethod DigestMethod
+	Algorithm    string       `xml:",attr,omitempty"`
+	DigestMethod DigestMethod `xml:",omitempty"`
 }
 
 //DigestMethod is a digest type specification
 type DigestMethod struct {
-	Algorithm string `xml:",attr"`
+	Algorithm string `xml:",attr,omitempty"`
 }
 
 //Well-known public-key encryption methods

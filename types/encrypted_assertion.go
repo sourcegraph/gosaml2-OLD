@@ -13,16 +13,27 @@ type EncryptedAssertion struct {
 	XMLName          xml.Name         `xml:"urn:oasis:names:tc:SAML:2.0:assertion EncryptedAssertion"`
 	EncryptionMethod EncryptionMethod `xml:"EncryptedData>EncryptionMethod"`
 	EncryptedKey     EncryptedKey     `xml:"EncryptedData>KeyInfo>EncryptedKey"`
+	DetEncryptedKey  EncryptedKey     `xml:"EncryptedKey"` // detached EncryptedKey element
 	CipherValue      string           `xml:"EncryptedData>CipherData>CipherValue"`
 }
 
-func (ea *EncryptedAssertion) decrypt(cert *tls.Certificate) ([]byte, error) {
+func (ea *EncryptedAssertion) DecryptBytes(cert *tls.Certificate) ([]byte, error) {
 	data, err := base64.StdEncoding.DecodeString(ea.CipherValue)
 	if err != nil {
 		return nil, err
 	}
 
-	k, err := ea.EncryptedKey.DecryptSymmetricKey(cert)
+	// The certificate of 'ek':
+	// - delivered in EncryptedAssertion
+	// - not used for decryption
+	// - must match 'cert' (SP encryption certificate), only 'cert' is used for decryption
+	ek := &ea.EncryptedKey
+	if ek.X509Data == "" {
+		// Use detached EncryptedKey element (sibling of EncryptedData).  See:
+		// https://www.w3.org/TR/2002/REC-xmlenc-core-20021210/Overview.html#sec-Extensions-to-KeyInfo
+		ek = &ea.DetEncryptedKey
+	}
+	k, err := ek.DecryptSymmetricKey(cert)
 	if err != nil {
 		return nil, fmt.Errorf("cannot decrypt, error retrieving private key: %s", err)
 	}
@@ -40,7 +51,7 @@ func (ea *EncryptedAssertion) decrypt(cert *tls.Certificate) ([]byte, error) {
 			return nil, fmt.Errorf("cannot open AES-GCM: %s", err)
 		}
 		return plainText, nil
-	case MethodAES128CBC:
+	case MethodAES128CBC, MethodAES256CBC:
 		nonce, data := data[:k.BlockSize()], data[k.BlockSize():]
 		c := cipher.NewCBCDecrypter(k, nonce)
 		c.CryptBlocks(data, data)
@@ -59,13 +70,16 @@ func (ea *EncryptedAssertion) decrypt(cert *tls.Certificate) ([]byte, error) {
 
 // Decrypt decrypts and unmarshals the EncryptedAssertion.
 func (ea *EncryptedAssertion) Decrypt(cert *tls.Certificate) (*Assertion, error) {
-	plaintext, err := ea.decrypt(cert)
+	plaintext, err := ea.DecryptBytes(cert)
+	if err != nil {
+		return nil, fmt.Errorf("Error decrypting assertion: %v", err)
+	}
 
 	assertion := &Assertion{}
 
 	err = xml.Unmarshal(plaintext, assertion)
 	if err != nil {
-		return nil, fmt.Errorf("Error decrypting assertion: %v", err)
+		return nil, fmt.Errorf("Error unmarshaling assertion: %v", err)
 	}
 
 	return assertion, nil

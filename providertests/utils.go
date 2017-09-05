@@ -1,15 +1,58 @@
 package providertests
 
 import (
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"encoding/xml"
+	"fmt"
 	"io/ioutil"
+	"sort"
 	"testing"
+	"time"
 
+	"github.com/jonboulle/clockwork"
 	"github.com/russellhaering/gosaml2"
+	"github.com/russellhaering/gosaml2/types"
 	"github.com/russellhaering/goxmldsig"
+	"github.com/stretchr/testify/require"
 )
+
+func scenarioIndexes(errs map[int]string, warns map[int]scenarioWarnings) (idxs []int) {
+	for idx, _ := range errs {
+		idxs = append(idxs, idx)
+	}
+	for idx, _ := range warns {
+		idxs = append(idxs, idx)
+	}
+	sort.Ints(idxs)
+	return
+}
+
+type scenarioWarnings struct {
+	InvalidTime   bool
+	NotInAudience bool
+}
+
+func scenarioErrorChecker(i int, scenarioErrors map[int]string) func(*testing.T, error) {
+	return func(t *testing.T, err error) {
+		if msg, ok := scenarioErrors[i]; ok && msg != "" {
+			require.EqualError(t, err, msg, "Expected error message")
+		} else {
+			require.NoError(t, err)
+		}
+	}
+}
+
+func scenarioWarningChecker(i int, scenarioWarns map[int]scenarioWarnings) func(*testing.T, *saml2.WarningInfo) {
+	return func(t *testing.T, warningInfo *saml2.WarningInfo) {
+		expectedWarnings := scenarioWarns[i]
+		require.Equal(t, expectedWarnings.InvalidTime, warningInfo.InvalidTime,
+			fmt.Sprintf("InvalidTime mismatch: expected: %+v, actual: %+v", expectedWarnings, warningInfo))
+		require.Equal(t, expectedWarnings.NotInAudience, warningInfo.NotInAudience, "NotInAudience mismatch")
+	}
+}
 
 func LoadXMLResponse(path string) string {
 	xml, err := ioutil.ReadFile(path)
@@ -27,6 +70,19 @@ func LoadRawResponse(path string) string {
 	}
 
 	return string(data)
+}
+
+func LoadKeyStore(certPath, keyPath string) (ks dsig.TLSCertKeyStore) {
+	if certBytes, err := ioutil.ReadFile(certPath); err != nil {
+		panic(fmt.Errorf("%v: cannot read: %v", certPath, err))
+	} else if keyBytes, err := ioutil.ReadFile(keyPath); err != nil {
+		panic(fmt.Errorf("%v: cannot read: %v", keyPath, err))
+	} else if cert, err := tls.X509KeyPair(certBytes, keyBytes); err != nil {
+		panic(fmt.Errorf("%v/%v: cannot create key pair: %v", certPath, keyPath, err))
+	} else {
+		ks = dsig.TLSCertKeyStore(cert)
+	}
+	return
 }
 
 func LoadCertificateStore(path string) dsig.X509CertificateStore {
@@ -56,4 +112,44 @@ type ProviderTestScenario struct {
 	ServiceProvider  *saml2.SAMLServiceProvider
 	CheckError       func(*testing.T, error)
 	CheckWarningInfo func(*testing.T, *saml2.WarningInfo)
+}
+
+func getAtTime(idx int, scenarioAtTimes map[int]string) (atTime time.Time) {
+	if strAtTime, ok := scenarioAtTimes[idx]; ok && strAtTime != "" {
+		if atm, err := time.Parse(time.RFC3339, strAtTime); err == nil {
+			return atm
+		}
+	}
+	return // zero time
+}
+
+func spAtTime(template *saml2.SAMLServiceProvider, atTime time.Time, rawResp string) *saml2.SAMLServiceProvider {
+	resp := &types.Response{}
+	if rawResp == "" {
+		panic(fmt.Errorf("empty rawResp"))
+	}
+	var respBytes []byte
+	var err error
+	if respBytes, err = base64.StdEncoding.DecodeString(rawResp); err != nil {
+		respBytes = []byte(rawResp)
+	}
+	if err := xml.Unmarshal(respBytes, resp); err != nil {
+		panic(fmt.Errorf("cannot parse Response XML: %v", err))
+	}
+
+	var sp saml2.SAMLServiceProvider
+	sp = *template // copy most fields template, we only set the clock below
+	if atTime.IsZero() {
+		// Prefer more official Assertion IssueInstant over Response IssueIntant
+		// (Assertion will be signed, either individually or as part of Response)
+		if len(resp.Assertions) > 0 && !resp.Assertions[0].IssueInstant.IsZero() {
+			atTime = resp.Assertions[0].IssueInstant
+		} else if !resp.IssueInstant.IsZero() {
+			atTime = resp.IssueInstant
+		} else {
+			panic(fmt.Errorf("could not determine atTime"))
+		}
+	}
+	sp.Clock = dsig.NewFakeClock(clockwork.NewFakeClockAt(atTime))
+	return &sp
 }

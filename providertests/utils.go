@@ -48,8 +48,7 @@ func scenarioErrorChecker(i int, scenarioErrors map[int]string) func(*testing.T,
 func scenarioWarningChecker(i int, scenarioWarns map[int]scenarioWarnings) func(*testing.T, *saml2.WarningInfo) {
 	return func(t *testing.T, warningInfo *saml2.WarningInfo) {
 		expectedWarnings := scenarioWarns[i]
-		require.Equal(t, expectedWarnings.InvalidTime, warningInfo.InvalidTime,
-			fmt.Sprintf("InvalidTime mismatch: expected: %+v, actual: %+v", expectedWarnings, warningInfo))
+		require.Equal(t, expectedWarnings.InvalidTime, warningInfo.InvalidTime, "InvalidTime mismatch")
 		require.Equal(t, expectedWarnings.NotInAudience, warningInfo.NotInAudience, "NotInAudience mismatch")
 	}
 }

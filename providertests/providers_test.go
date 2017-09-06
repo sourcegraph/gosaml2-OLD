@@ -23,7 +23,23 @@ func TestValidateResponses(t *testing.T) {
 				Clock:                       dsig.NewFakeClock(clockwork.NewFakeClockAt(time.Date(2016, 7, 25, 18, 30, 0, 0, time.UTC))),
 			},
 		},
-
+		{
+			// Okta uses detached EncryptedKey element (sibling of EncryptedData).  See:
+			// https://www.w3.org/TR/2002/REC-xmlenc-core-20021210/Overview.html#sec-Extensions-to-KeyInfo
+			ScenarioName: "OktaEncrypted",
+			Response:     LoadRawResponse("./testdata/oktaenc_response.b64"),
+			ServiceProvider: &saml2.SAMLServiceProvider{
+				IdentityProviderSSOURL:      "https://do.not.need/this/not/sending/authn",
+				IdentityProviderIssuer:      "http://www.okta.com/exkbb59wb20X96NY20h7",
+				AssertionConsumerServiceURL: "https://saml.test.nope/session/sso/saml/acs/skv8dv26wh",
+				SignAuthnRequests:           false,
+				AudienceURI:                 "https://saml.test.nope/session/sso/saml/spentityid/skv8dv26wh",
+				IDPCertificateStore:         LoadCertificateStore("./testdata/oktaenc_idp_signing_cert.pem"),
+				SPKeyStore:                  LoadKeyStore("./testdata/oktaenc_sp_encryption_cert.pem", "./testdata/oktaenc_sp_encryption_key.pem"),
+				SPSigningKeyStore:           LoadKeyStore("./testdata/oktaenc_sp_signing_cert.pem", "./testdata/oktaenc_sp_signing_key.pem"),
+				Clock:                       dsig.NewFakeClock(clockwork.NewFakeClockAt(time.Date(2017, 9, 06, 22, 14, 0, 0, time.UTC))),
+			},
+		},
 		{
 			ScenarioName: "Okta",
 			Response:     LoadXMLResponse("./testdata/okta_response.xml"),

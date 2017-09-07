@@ -16,6 +16,7 @@ type Response struct {
 	Issuer              *Issuer              `xml:"Issuer"`
 	Assertions          []Assertion          `xml:"Assertion"`
 	EncryptedAssertions []EncryptedAssertion `xml:"EncryptedAssertion"`
+	SignatureValidated  bool                 `xml:"-"` // not read, not dumped
 }
 
 type Status struct {
@@ -48,6 +49,7 @@ type Assertion struct {
 	Conditions         *Conditions         `xml:"Conditions"`
 	AttributeStatement *AttributeStatement `xml:"AttributeStatement"`
 	AuthnStatement     *AuthnStatement     `xml:"AuthnStatement"`
+	SignatureValidated bool                `xml:"-"` // not read, not dumped
 }
 
 type Subject struct {

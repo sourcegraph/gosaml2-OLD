@@ -259,6 +259,7 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		return nil, err
 	}
 
+	var assertionSignaturesValidated bool
 	if !sp.SkipSignatureValidation {
 		err = sp.validateAssertionSignatures(el)
 		if err == dsig.ErrMissingSignature {
@@ -267,6 +268,8 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 			}
 		} else if err != nil {
 			return nil, err
+		} else {
+			assertionSignaturesValidated = true
 		}
 	}
 
@@ -274,6 +277,12 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 	err = xmlUnmarshalElement(el, decodedResponse)
 	if err != nil {
 		return nil, fmt.Errorf("unable to unmarshal response: %v", err)
+	}
+	decodedResponse.SignatureValidated = responseSignatureValidated
+	if assertionSignaturesValidated {
+		for idx := 0; idx < len(decodedResponse.Assertions); idx++ {
+			decodedResponse.Assertions[idx].SignatureValidated = true
+		}
 	}
 
 	err = sp.Validate(decodedResponse)

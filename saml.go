@@ -184,10 +184,11 @@ type WarningInfo struct {
 }
 
 type AssertionInfo struct {
-	NameID              string
-	Values              Values
-	WarningInfo         *WarningInfo
-	AuthnInstant        *time.Time
-	SessionNotOnOrAfter *time.Time
-	Assertions          []types.Assertion
+	NameID                     string
+	Values                     Values
+	WarningInfo                *WarningInfo
+	AuthnInstant               *time.Time
+	SessionNotOnOrAfter        *time.Time
+	Assertions                 []types.Assertion
+	ResponseSignatureValidated bool
 }

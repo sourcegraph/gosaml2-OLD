@@ -79,18 +79,21 @@ func debugKeyFp(keyBytes []byte) string {
 
 //DecryptSymmetricKey returns the private key contained in the EncryptedKey document
 func (ek *EncryptedKey) DecryptSymmetricKey(cert *tls.Certificate) (cipher.Block, error) {
-	encCert, err := base64.StdEncoding.DecodeString(ek.X509Data)
-	if err != nil {
-		return nil, fmt.Errorf("error getting certificate from encryptedkey: %v", err)
-	}
-
 	if len(cert.Certificate) < 1 {
 		return nil, fmt.Errorf("decryption tls.Certificate has no public certs attached")
 	}
 
-	if !bytes.Equal(cert.Certificate[0], encCert) {
-		return nil, fmt.Errorf("key decryption attempted with mismatched cert, SP cert(%.11s), assertion cert(%.11s)",
-			debugKeyFp(cert.Certificate[0]), debugKeyFp(encCert))
+	// The EncryptedKey may or may not include X509Data (certificate).
+	// If included, the EncryptedKey certificate:
+	// - is FYI only (fail if it does not match the SP certificate)
+	// - is NOT used to decrypt CipherData
+	if ek.X509Data != "" {
+		if encCert, err := base64.StdEncoding.DecodeString(ek.X509Data); err != nil {
+			return nil, fmt.Errorf("error decoding EncryptedKey certificate: %v", err)
+		} else if !bytes.Equal(cert.Certificate[0], encCert) {
+			return nil, fmt.Errorf("key decryption attempted with mismatched cert, SP cert(%.11s), assertion cert(%.11s)",
+				debugKeyFp(cert.Certificate[0]), debugKeyFp(encCert))
+		}
 	}
 
 	cipherText, err := base64.StdEncoding.DecodeString(ek.CipherValue)

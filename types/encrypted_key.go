@@ -106,10 +106,8 @@ func (ek *EncryptedKey) DecryptSymmetricKey(cert *tls.Certificate) (cipher.Block
 		var h hash.Hash
 
 		switch ek.EncryptionMethod.DigestMethod.Algorithm {
-		case "":
-			return nil, fmt.Errorf("missing digest algorithm")
-		case MethodSHA1:
-			h = sha1.New()
+		case "", MethodSHA1:
+			h = sha1.New() // default
 		case MethodSHA256:
 			h = sha256.New()
 		case MethodSHA512:

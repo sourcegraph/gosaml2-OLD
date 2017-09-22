@@ -18,22 +18,22 @@ var oneLoginScenarioErrors = map[int]string{
 	3: "",
 	// 04 - signed(Response(signed(Assertion)))
 	4: "",
-	// Response(encrypted(signed(Assertion))), no encryption certificate included in Assertion
-	// OneLogin does not include SP encryption certificate by default.  PingFed also does not include
-	// the SP encryption certificate and it does not seem to have an option for it.
-	// FIXME: gosaml2 needs to handle this
-	5: "error validating response: unable to decrypt encrypted assertion: cannot decrypt, error retrieving private key: key decryption attempted with mismatched cert, SP cert(cd:f6:7c:e9), assertion cert()",
+	// 05 - Response(encrypted(signed(Assertion))), no encryption certificate included in Assertion.
+	// OneLogin does not include SP encryption certificate by default.  ADFS and PingFed also do not
+	// include the SP encryption certificate and they do not provide an option to include it in Response.
+	// OneLogin and PingFed also do not include DigestMethod (default to http://www.w3.org/2000/09/xmldsig#sha1).
+	5: "",
 	// 06 - Response(encrypted(signed(Assertion)))
 	6: "",
 	// 07 - signed(Response(encrypted(Assertion)))
 	7: "",
 	// 08 - signed(Response(encrypted(signed(Assertion))))
 	8: "",
-	// 09 - signed(Response(encrypted(signed(Assertion)))), no encryption certificate included in Assertion
-	// OneLogin does not include SP encryption certificate by default.  PingFed also does not include
-	// the SP encryption certificate and it does not seem to have an option for it.
-	// FIXME: gosaml2 needs to handle this
-	9: "error validating response: unable to decrypt encrypted assertion: cannot decrypt, error retrieving private key: key decryption attempted with mismatched cert, SP cert(cd:f6:7c:e9), assertion cert()",
+	// 09 - signed(Response(encrypted(signed(Assertion)))), no encryption certificate included in Assertion.
+	// OneLogin does not include SP encryption certificate by default.  ADFS and PingFed also do not
+	// include the SP encryption certificate and they do not provide an option to include it in Response.
+	// OneLogin and PingFed also do not include DigestMethod (default to http://www.w3.org/2000/09/xmldsig#sha1).
+	9: "",
 	// 11 - signed(Response(Assertion)) - 01 Assertion content changed slightly
 	11: "error validating response: Signature could not be verified",
 	// 12 - signed(Response(Assertion)) - 01 Response content changed slightly

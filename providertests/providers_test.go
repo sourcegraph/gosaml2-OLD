@@ -24,6 +24,36 @@ func TestValidateResponses(t *testing.T) {
 			},
 		},
 		{
+			ScenarioName: "Adfs",
+			Response:     LoadRawResponse("./testdata/adfs_response.b64"),
+			ServiceProvider: &saml2.SAMLServiceProvider{
+				IdentityProviderSSOURL:      "https://do.not.need/this/not/sending/authn",
+				IdentityProviderIssuer:      "http://fs.spstest2.com/adfs/services/trust",
+				AssertionConsumerServiceURL: "https://saml.test.nope/session/sso/saml/acs/dknhyszjl7",
+				SignAuthnRequests:           false,
+				AudienceURI:                 "https://saml.test.nope/session/sso/saml/spentityid/dknhyszjl7",
+				IDPCertificateStore:         LoadCertificateStore("./testdata/adfs_idp_signing_cert.pem"),
+				SPKeyStore:                  LoadKeyStore("./testdata/adfs_sp_encryption_cert.pem", "./testdata/adfs_sp_encryption_key.pem"),
+				SPSigningKeyStore:           LoadKeyStore("./testdata/adfs_sp_signing_cert.pem", "./testdata/adfs_sp_signing_key.pem"),
+				Clock:                       dsig.NewFakeClock(clockwork.NewFakeClockAt(time.Date(2017, 9, 21, 23, 28, 0, 0, time.UTC))),
+			},
+		},
+		{
+			ScenarioName: "AdfsEncrypted",
+			Response:     LoadRawResponse("./testdata/adfs_response_enc.b64"),
+			ServiceProvider: &saml2.SAMLServiceProvider{
+				IdentityProviderSSOURL:      "https://do.not.need/this/not/sending/authn",
+				IdentityProviderIssuer:      "http://fs.spstest2.com/adfs/services/trust",
+				AssertionConsumerServiceURL: "https://saml.test.nope/session/sso/saml/acs/dknhyszjl7",
+				SignAuthnRequests:           false,
+				AudienceURI:                 "https://saml.test.nope/session/sso/saml/spentityid/dknhyszjl7",
+				IDPCertificateStore:         LoadCertificateStore("./testdata/adfs_idp_signing_cert.pem"),
+				SPKeyStore:                  LoadKeyStore("./testdata/adfs_sp_encryption_cert.pem", "./testdata/adfs_sp_encryption_key.pem"),
+				SPSigningKeyStore:           LoadKeyStore("./testdata/adfs_sp_signing_cert.pem", "./testdata/adfs_sp_signing_key.pem"),
+				Clock:                       dsig.NewFakeClock(clockwork.NewFakeClockAt(time.Date(2017, 9, 21, 23, 20, 0, 0, time.UTC))),
+			},
+		},
+		{
 			// Okta uses detached EncryptedKey element (sibling of EncryptedData).  See:
 			// https://www.w3.org/TR/2002/REC-xmlenc-core-20021210/Overview.html#sec-Extensions-to-KeyInfo
 			ScenarioName: "OktaEncrypted",

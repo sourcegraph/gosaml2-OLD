@@ -23,12 +23,9 @@ func (ea *EncryptedAssertion) DecryptBytes(cert *tls.Certificate) ([]byte, error
 		return nil, err
 	}
 
-	// The certificate of 'ek':
-	// - delivered in EncryptedAssertion
-	// - not used for decryption
-	// - must match 'cert' (SP encryption certificate), only 'cert' is used for decryption
+	// EncryptedKey must include CipherValue.  EncryptedKey may be part of EncryptedData.
 	ek := &ea.EncryptedKey
-	if ek.X509Data == "" {
+	if ek.CipherValue == "" {
 		// Use detached EncryptedKey element (sibling of EncryptedData).  See:
 		// https://www.w3.org/TR/2002/REC-xmlenc-core-20021210/Overview.html#sec-Extensions-to-KeyInfo
 		ek = &ea.DetEncryptedKey

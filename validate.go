@@ -131,7 +131,7 @@ func (sp *SAMLServiceProvider) Validate(response *types.Response) error {
 
 	issuer := response.Issuer
 	if issuer == nil {
-		// FIXME?: SAML Core 2.0 Section 3.2.2 has Response.Destination as [Optional]
+		// FIXME?: SAML Core 2.0 Section 3.2.2 has Response.Issuer as [Optional]
 		return ErrMissingElement{Tag: IssuerTag}
 	}
 

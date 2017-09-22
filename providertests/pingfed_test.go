@@ -28,11 +28,11 @@ var pingFedScenarioErrors = map[int]string{
 	// Response.Destination.  gosaml2 now only checks the value of Response.Destination if it
 	// is set (mandated by SAML Core 2.0).
 	03: "",
-	// 05 - signed(Response(encrypted(Assertion))) - no encryption certificate included in Assertion
-	// PingFed does not include the SP encryption certificate and it does not seem to have an option for it.
+	// 05 - signed(Response(encrypted(Assertion))) - no encryption certificate included in Assertion.
+	// PingFed and ADFS do not include the SP encryption certificate and do not provide an option to include it in Response.
 	// OneLogin (see olgn09/olgn09_response_05.b64) also does not include SP encryption certificate by default.
-	// FIXME: gosaml2 needs to handle this.
-	05: "error validating response: unable to decrypt encrypted assertion: cannot decrypt, error retrieving private key: key decryption attempted with mismatched cert, SP cert(cd:f6:7c:e9), assertion cert()",
+	// OneLogin and PingFed also do not include DigestMethod (default to http://www.w3.org/2000/09/xmldsig#sha1).
+	05: "",
 }
 
 var pingFedScenarioWarnings = map[int]scenarioWarnings{}

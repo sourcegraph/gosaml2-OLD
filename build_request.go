@@ -14,7 +14,7 @@ import (
 
 const issueInstantFormat = "2006-01-02T15:04:05Z"
 
-func (sp *SAMLServiceProvider) BuildAuthRequestDocument() (*etree.Document, error) {
+func (sp *SAMLServiceProvider) buildAuthnRequest(includeSig bool) (*etree.Document, error) {
 	authnRequest := &etree.Element{
 		Space: "samlp",
 		Tag:   "AuthnRequest",
@@ -55,7 +55,8 @@ func (sp *SAMLServiceProvider) BuildAuthRequestDocument() (*etree.Document, erro
 
 	doc := etree.NewDocument()
 
-	if sp.SignAuthnRequests {
+	// Only POST binding includes <Signature> in <AuthnRequest> (includeSig)
+	if sp.SignAuthnRequests && includeSig {
 		signed, err := sp.SignAuthnRequest(authnRequest)
 		if err != nil {
 			return nil, err
@@ -66,6 +67,14 @@ func (sp *SAMLServiceProvider) BuildAuthRequestDocument() (*etree.Document, erro
 		doc.SetRoot(authnRequest)
 	}
 	return doc, nil
+}
+
+func (sp *SAMLServiceProvider) BuildAuthRequestDocument() (*etree.Document, error) {
+	return sp.buildAuthnRequest(true)
+}
+
+func (sp *SAMLServiceProvider) BuildAuthRequestDocumentNoSig() (*etree.Document, error) {
+	return sp.buildAuthnRequest(false)
 }
 
 // SignAuthnRequest takes a document, builds a signature, creates another document
@@ -101,7 +110,7 @@ func (sp *SAMLServiceProvider) BuildAuthRequest() (string, error) {
 	return doc.WriteToString()
 }
 
-func (sp *SAMLServiceProvider) BuildAuthURLFromDocument(relayState string, doc *etree.Document) (string, error) {
+func (sp *SAMLServiceProvider) buildAuthURLFromDocument(relayState, binding string, doc *etree.Document) (string, error) {
 	parsedUrl, err := url.Parse(sp.IdentityProviderSSOURL)
 	if err != nil {
 		return "", err
@@ -137,8 +146,27 @@ func (sp *SAMLServiceProvider) BuildAuthURLFromDocument(relayState string, doc *
 		qs.Add("RelayState", relayState)
 	}
 
+	if sp.SignAuthnRequests && binding == BindingHttpRedirect {
+		// Calculate digest of URL encoded query
+		ctx := sp.SigningContext()
+		qs.Add("SigAlg", ctx.GetSignatureMethodIdentifier())
+		var rawSignature []byte
+		if rawSignature, err = ctx.SignString(qs.Encode()); err != nil {
+			return "", fmt.Errorf("unable to sign query string of redirect URL: %v", err)
+		}
+		qs.Add("Signature", base64.StdEncoding.EncodeToString(rawSignature))
+	}
+
 	parsedUrl.RawQuery = qs.Encode()
 	return parsedUrl.String(), nil
+}
+
+func (sp *SAMLServiceProvider) BuildAuthURLFromDocument(relayState string, doc *etree.Document) (string, error) {
+	return sp.buildAuthURLFromDocument(relayState, BindingHttpPost, doc)
+}
+
+func (sp *SAMLServiceProvider) BuildAuthURLRedirect(relayState string, doc *etree.Document) (string, error) {
+	return sp.buildAuthURLFromDocument(relayState, BindingHttpRedirect, doc)
 }
 
 // BuildAuthURL builds redirect URL to be sent to principal

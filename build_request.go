@@ -147,13 +147,15 @@ func (sp *SAMLServiceProvider) buildAuthURLFromDocument(relayState, binding stri
 	}
 
 	if sp.SignAuthnRequests && binding == BindingHttpRedirect {
-		// Calculate digest of URL encoded query
+		// Sign URL encoded query (see Section 3.4.4.1 DEFLATE Encoding of saml-bindings-2.0-os.pdf)
 		ctx := sp.SigningContext()
 		qs.Add("SigAlg", ctx.GetSignatureMethodIdentifier())
 		var rawSignature []byte
 		if rawSignature, err = ctx.SignString(qs.Encode()); err != nil {
 			return "", fmt.Errorf("unable to sign query string of redirect URL: %v", err)
 		}
+
+		// Now add base64 encoded Signature
 		qs.Add("Signature", base64.StdEncoding.EncodeToString(rawSignature))
 	}
 

@@ -37,17 +37,22 @@ func main() {
 	}
 
 	for _, kd := range metadata.IDPSSODescriptor.KeyDescriptors {
-		certData, err := base64.StdEncoding.DecodeString(kd.KeyInfo.X509Data.X509Certificate.Data)
-		if err != nil {
-			panic(err)
-		}
+		for idx, xcert := range kd.KeyInfo.X509Data.X509Certificates {
+			if xcert.Data == "" {
+				panic(fmt.Errorf("metadata certificate(%d) must not be empty", idx))
+			}
+			certData, err := base64.StdEncoding.DecodeString(xcert.Data)
+			if err != nil {
+				panic(err)
+			}
 
-		idpCert, err := x509.ParseCertificate(certData)
-		if err != nil {
-			panic(err)
-		}
+			idpCert, err := x509.ParseCertificate(certData)
+			if err != nil {
+				panic(err)
+			}
 
-		certStore.Roots = append(certStore.Roots, idpCert)
+			certStore.Roots = append(certStore.Roots, idpCert)
+		}
 	}
 
 	// We sign the AuthnRequest with a random key because Okta doesn't seem

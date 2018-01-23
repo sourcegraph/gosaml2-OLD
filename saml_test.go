@@ -95,7 +95,12 @@ func TestSAML(t *testing.T) {
 	assertionInfo, err := sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(raw)))
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
-	require.NotEmpty(t, assertionInfo.WarningInfo)
+	require.NotNil(t, assertionInfo.WarningInfo) // always set when err == nil
+	require.False(t, assertionInfo.WarningInfo.OneTimeUse)
+	require.False(t, assertionInfo.WarningInfo.NotInAudience)
+	require.False(t, assertionInfo.WarningInfo.InvalidTime)
+	require.Nil(t, assertionInfo.WarningInfo.ProxyRestriction)
+
 	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.NameID)
 	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.Values.Get("Email"))
 	require.Equal(t, "Phoebe", assertionInfo.Values.Get("FirstName"))

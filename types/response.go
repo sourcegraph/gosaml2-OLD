@@ -7,12 +7,16 @@ import (
 
 type Response struct {
 	XMLName             xml.Name             `xml:"urn:oasis:names:tc:SAML:2.0:protocol Response"`
+	ID                  string               `xml:"ID,attr"`
+	InResponseTo        string               `xml:"InResponseTo,attr"`
 	Destination         string               `xml:"Destination,attr"`
 	Version             string               `xml:"Version,attr"`
+	IssueInstant        time.Time            `xml:"IssueInstant,attr"`
 	Status              *Status              `xml:"Status"`
 	Issuer              *Issuer              `xml:"Issuer"`
 	Assertions          []Assertion          `xml:"Assertion"`
 	EncryptedAssertions []EncryptedAssertion `xml:"EncryptedAssertion"`
+	SignatureValidated  bool                 `xml:"-"` // not read, not dumped
 }
 
 type Status struct {
@@ -30,13 +34,22 @@ type Issuer struct {
 	Value   string   `xml:",chardata"`
 }
 
+type Signature struct {
+	SignatureDocument []byte `xml:",innerxml"`
+}
+
 type Assertion struct {
 	XMLName            xml.Name            `xml:"urn:oasis:names:tc:SAML:2.0:assertion Assertion"`
+	Version            string              `xml:"Version,attr"`
+	ID                 string              `xml:"ID,attr"`
+	IssueInstant       time.Time           `xml:"IssueInstant,attr"`
 	Issuer             *Issuer             `xml:"Issuer"`
+	Signature          *Signature          `xml:"Signature"`
 	Subject            *Subject            `xml:"Subject"`
 	Conditions         *Conditions         `xml:"Conditions"`
 	AttributeStatement *AttributeStatement `xml:"AttributeStatement"`
 	AuthnStatement     *AuthnStatement     `xml:"AuthnStatement"`
+	SignatureValidated bool                `xml:"-"` // not read, not dumped
 }
 
 type Subject struct {

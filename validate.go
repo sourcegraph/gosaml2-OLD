@@ -131,6 +131,7 @@ func (sp *SAMLServiceProvider) Validate(response *types.Response) error {
 
 	issuer := response.Issuer
 	if issuer == nil {
+		// FIXME?: SAML Core 2.0 Section 3.2.2 has Response.Issuer as [Optional]
 		return ErrMissingElement{Tag: IssuerTag}
 	}
 
@@ -161,6 +162,18 @@ func (sp *SAMLServiceProvider) Validate(response *types.Response) error {
 	}
 
 	for _, assertion := range response.Assertions {
+		issuer = assertion.Issuer
+		if issuer == nil {
+			return ErrMissingElement{Tag: IssuerTag}
+		}
+		if sp.IdentityProviderIssuer != "" && assertion.Issuer.Value != sp.IdentityProviderIssuer {
+			return ErrInvalidValue{
+				Key:      IssuerTag,
+				Expected: sp.IdentityProviderIssuer,
+				Actual:   issuer.Value,
+			}
+		}
+
 		subject := assertion.Subject
 		if subject == nil {
 			return ErrMissingElement{Tag: SubjectTag}

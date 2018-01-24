@@ -8,11 +8,10 @@ import (
 	"github.com/jonboulle/clockwork"
 	"github.com/russellhaering/gosaml2"
 	"github.com/russellhaering/goxmldsig"
-	"github.com/stretchr/testify/require"
 )
 
 var oktaScenarioErrors = map[int]string{
-	1:  "error validating response: Missing signature referencing the top-level element",
+	1:  "error validating response: response and/or assertions must be signed",
 	3:  "error validating response: Could not verify certificate against trusted certs",
 	4:  "error validating response: Unrecognized Destination value, Expected: http://dba9a5fc.ngrok.io/v1/_saml_callback, Actual: fake.identifier.example.com",
 	5:  "error validating response: Unrecognized Issuer value, Expected: http://example.com/saml/acs/example, Actual: fake.identifier.example.com",
@@ -26,11 +25,6 @@ var oktaScenarioErrors = map[int]string{
 	15: "error validating response: Unrecognized StatusCode value, Expected: urn:oasis:names:tc:SAML:2.0:status:Success, Actual: urn:oasis:names:tc:SAML:2.0:status:Requester",
 }
 
-type scenarioWarnings struct {
-	InvalidTime   bool
-	NotInAudience bool
-}
-
 var oktaScenarioWarnings = map[int]scenarioWarnings{
 	6: scenarioWarnings{
 		NotInAudience: true,
@@ -38,24 +32,6 @@ var oktaScenarioWarnings = map[int]scenarioWarnings{
 	11: scenarioWarnings{
 		InvalidTime: true,
 	},
-}
-
-func oktaErrorChecker(i int) func(*testing.T, error) {
-	return func(t *testing.T, err error) {
-		if msg, ok := oktaScenarioErrors[i]; ok {
-			require.EqualError(t, err, msg, "Expected error message")
-		} else {
-			require.NoError(t, err)
-		}
-	}
-}
-
-func oktaWarningChecker(i int) func(*testing.T, *saml2.WarningInfo) {
-	return func(t *testing.T, warningInfo *saml2.WarningInfo) {
-		expectedWarnings := oktaScenarioWarnings[i]
-		require.Equal(t, expectedWarnings.InvalidTime, warningInfo.InvalidTime, "InvalidTime mismatch")
-		require.Equal(t, expectedWarnings.NotInAudience, warningInfo.NotInAudience, "InvalidTime mismatch")
-	}
 }
 
 func TestOktaDevCasesLocally(t *testing.T) {
@@ -77,8 +53,8 @@ func TestOktaDevCasesLocally(t *testing.T) {
 			Response:        response,
 			ServiceProvider: sp,
 			// Capture the value of i by passing it to a function.
-			CheckError:       oktaErrorChecker(i),
-			CheckWarningInfo: oktaWarningChecker(i),
+			CheckError:       scenarioErrorChecker(i, oktaScenarioErrors),
+			CheckWarningInfo: scenarioWarningChecker(i, oktaScenarioWarnings),
 		})
 	}
 

@@ -48,6 +48,8 @@ func (sp *SAMLServiceProvider) RetrieveAssertionInfo(encodedResponse string) (*A
 	}
 
 	assertion := response.Assertions[0]
+	assertionInfo.Assertions = response.Assertions
+	assertionInfo.ResponseSignatureValidated = response.SignatureValidated
 
 	warningInfo, err := sp.VerifyAssertionConditions(&assertion)
 	if err != nil {

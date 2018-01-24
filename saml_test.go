@@ -95,7 +95,7 @@ func TestSAML(t *testing.T) {
 	assertionInfo, err := sp.RetrieveAssertionInfo(base64.StdEncoding.EncodeToString([]byte(raw)))
 	require.NoError(t, err)
 	require.NotEmpty(t, assertionInfo)
-	require.NotEmpty(t, assertionInfo.WarningInfo)
+	// require.NotEmpty(t, assertionInfo.WarningInfo)
 	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.NameID)
 	require.Equal(t, "phoebe.simon@scaleft.com", assertionInfo.Values.Get("Email"))
 	require.Equal(t, "Phoebe", assertionInfo.Values.Get("FirstName"))

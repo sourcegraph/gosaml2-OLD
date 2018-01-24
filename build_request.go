@@ -23,10 +23,8 @@ func (sp *SAMLServiceProvider) buildAuthnRequest(includeSig bool) (*etree.Docume
 	authnRequest.CreateAttr("xmlns:samlp", "urn:oasis:names:tc:SAML:2.0:protocol")
 	authnRequest.CreateAttr("xmlns:saml", "urn:oasis:names:tc:SAML:2.0:assertion")
 
-	arId, uerr := uuid.NewV4()
-	if uerr != nil {
-		return nil, fmt.Errorf("unable to create UUID: %v", uerr)
-	}
+	arId := uuid.NewV4()
+
 	authnRequest.CreateAttr("ID", "_"+arId.String())
 	authnRequest.CreateAttr("Version", "2.0")
 	authnRequest.CreateAttr("ProtocolBinding", "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST")

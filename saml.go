@@ -79,7 +79,7 @@ func (sp *SAMLServiceProvider) Metadata() (*types.EntityDescriptor, error) {
 	return &types.EntityDescriptor{
 		ValidUntil: time.Now().UTC().Add(time.Hour * 24 * 7), // 7 days
 		EntityID:   sp.ServiceProviderIssuer,
-		SPSSODescriptor: types.SPSSODescriptor{
+		SPSSODescriptor: &types.SPSSODescriptor{
 			AuthnRequestsSigned:        sp.SignAuthnRequests,
 			WantAssertionsSigned:       !sp.SkipSignatureValidation,
 			ProtocolSupportEnumeration: SAMLProtocolNamespace,

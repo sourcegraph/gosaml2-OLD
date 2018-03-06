@@ -11,9 +11,9 @@ type EntityDescriptor struct {
 	XMLName    xml.Name  `xml:"urn:oasis:names:tc:SAML:2.0:metadata EntityDescriptor"`
 	ValidUntil time.Time `xml:"validUntil,attr"`
 	// SAML 2.0 8.3.6 Entity Identifier could be used to represent issuer
-	EntityID         string           `xml:"entityID,attr"`
-	SPSSODescriptor  SPSSODescriptor  `xml:"SPSSODescriptor"`
-	IDPSSODescriptor IDPSSODescriptor `xml:"IDPSSODescriptor"`
+	EntityID         string            `xml:"entityID,attr"`
+	SPSSODescriptor  *SPSSODescriptor  `xml:"SPSSODescriptor,omitempty"`
+	IDPSSODescriptor *IDPSSODescriptor `xml:"IDPSSODescriptor,omitempty"`
 }
 
 type Endpoint struct {

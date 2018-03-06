@@ -136,8 +136,7 @@ func (sp *SAMLServiceProvider) decryptAssertions(el *etree.Element) error {
 			return fmt.Errorf("unable to decrypt encrypted assertion: %v", derr)
 		}
 
-		doc := etree.NewDocument()
-		err = doc.ReadFromBytes(raw)
+		doc, _, err := parseResponse(raw)
 		if err != nil {
 			return fmt.Errorf("unable to create element from decrypted assertion bytes: %v", derr)
 		}
@@ -218,25 +217,10 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 		return nil, err
 	}
 
-	doc := etree.NewDocument()
-	err = doc.ReadFromBytes(raw)
+	// Parse the raw response
+	doc, el, err := parseResponse(raw)
 	if err != nil {
-		// Attempt to inflate the response in case it happens to be compressed (as with one case at saml.oktadev.com)
-		buf, err := ioutil.ReadAll(flate.NewReader(bytes.NewReader(raw)))
-		if err != nil {
-			return nil, err
-		}
-
-		doc = etree.NewDocument()
-		err = doc.ReadFromBytes(buf)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	el := doc.Root()
-	if el == nil {
-		return nil, fmt.Errorf("unable to parse response")
+		return nil, err
 	}
 
 	var responseSignatureValidated bool
@@ -291,4 +275,30 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 	}
 
 	return decodedResponse, nil
+}
+
+// parseResponse is a helper function that was refactored out so that the XML parsing behavior can be isolated and unit tested
+func parseResponse(xml []byte) (*etree.Document, *etree.Element, error) {
+	doc := etree.NewDocument()
+	err := doc.ReadFromBytes(xml)
+	if err != nil {
+		// Attempt to inflate the response in case it happens to be compressed (as with one case at saml.oktadev.com)
+		buf, err := ioutil.ReadAll(flate.NewReader(bytes.NewReader(xml)))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		doc = etree.NewDocument()
+		err = doc.ReadFromBytes(buf)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	el := doc.Root()
+	if el == nil {
+		return nil, nil, fmt.Errorf("unable to parse response")
+	}
+
+	return doc, el, nil
 }

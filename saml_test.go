@@ -11,6 +11,7 @@ import (
 	"compress/flate"
 
 	"github.com/beevik/etree"
+	"github.com/russellhaering/gosaml2/types"
 	"github.com/russellhaering/goxmldsig"
 	require "github.com/stretchr/testify/require"
 )
@@ -252,4 +253,36 @@ func TestInvalidResponseNoElement(t *testing.T) {
 	response, err := sp.ValidateEncodedResponse(b64Response)
 	require.EqualError(t, err, "unable to parse response")
 	require.Nil(t, response)
+}
+func TestSAMLCommentInjection(t *testing.T) {
+	/*
+		Explanation:
+
+		See: https://duo.com/blog/duo-finds-saml-vulnerabilities-affecting-multiple-implementations
+
+		The TLDR is that XML canonicalization may result in a different value being signed from the one being retrieved.
+		The target of this is the NameID in the Subject of the SAMLResponse Assertion
+
+		Example:
+			 The following Subject
+			 ```<Subject>
+				<NameID>user@user.com<!---->.evil.com</NameID>
+			</Subject>```
+			would get canonicalized to
+			```
+			<Subject>
+				<NameID>user@user.com.evil.com</NameID>
+			</Subject>
+			```
+			Many XML parsers have a behavior where they pull the first text element, so in the example with the comment, a vulnerable XML parser would return `user@user.com`, ignoring the text after the comment.
+			Knowing this, a user (user@user.com.evil.com) can attack a vulnerable SP by manipulating their signed SAMLResponse with a comment that turns their username into another one.
+	*/
+
+	// To show that we are not vulnerable, we want to prove that we get the canonicalized value using our parser
+	_, el, err := parseResponse([]byte(commentInjectionAttackResponse))
+	require.NoError(t, err)
+	decodedResponse := &types.Response{}
+	err = xmlUnmarshalElement(el, decodedResponse)
+	require.NoError(t, err)
+	require.Equal(t, "phoebe.simon@scaleft.com.evil.com", decodedResponse.Assertions[0].Subject.NameID.Value, "The full, canonacalized NameID should be returned.")
 }

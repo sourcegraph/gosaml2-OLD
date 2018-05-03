@@ -58,6 +58,14 @@ type Subject struct {
 	SubjectConfirmation *SubjectConfirmation `xml:"SubjectConfirmation"`
 }
 
+type AuthnContext struct {
+	AuthnContextClassRef *AuthnContextClassRef `xml:"AuthnContextClassRef"`
+}
+
+type AuthnContextClassRef struct {
+	Value string `xml:",chardata"`
+}
+
 type NameID struct {
 	XMLName xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:assertion NameID"`
 	Value   string   `xml:",chardata"`
@@ -125,7 +133,8 @@ type AttributeValue struct {
 }
 
 type AuthnStatement struct {
-	XMLName             xml.Name   `xml:"AuthnStatement"`
-	AuthnInstant        *time.Time `xml:"AuthnInstant,attr,omitempty"`
-	SessionNotOnOrAfter *time.Time `xml:"SessionNotOnOrAfter,attr,omitempty"`
+	XMLName             xml.Name      `xml:"AuthnStatement"`
+	AuthnInstant        *time.Time    `xml:"AuthnInstant,attr,omitempty"`
+	SessionNotOnOrAfter *time.Time    `xml:"SessionNotOnOrAfter,attr,omitempty"`
+	AuthnContext        *AuthnContext `xml:"AuthnContext"`
 }

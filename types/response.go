@@ -5,6 +5,20 @@ import (
 	"time"
 )
 
+// UnverifiedBaseResponse extracts several basic attributes of a SAML Response
+// which may be useful in deciding how to validate the Response. An UnverifiedBaseResponse
+// is parsed by this library prior to any validation of the Response, so the
+// values it contains may have been supplied by an attacker and should not be
+// trusted as authoritative from the IdP.
+type UnverifiedBaseResponse struct {
+	XMLName      xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:protocol Response"`
+	ID           string   `xml:"ID,attr"`
+	InResponseTo string   `xml:"InResponseTo,attr"`
+	Destination  string   `xml:"Destination,attr"`
+	Version      string   `xml:"Version,attr"`
+	Issuer       *Issuer  `xml:"Issuer"`
+}
+
 type Response struct {
 	XMLName             xml.Name             `xml:"urn:oasis:names:tc:SAML:2.0:protocol Response"`
 	ID                  string               `xml:"ID,attr"`

@@ -10,6 +10,13 @@ import (
 
 func ExerciseProviderTestScenarios(t *testing.T, scenarios []ProviderTestScenario) {
 	for _, scenario := range scenarios {
+		// DecodeUnverifiedBaseResponse is more permissive than RetrieveAssertionInfo.
+		// If an error _is_ returned it should match, but it is OK for no error to be
+		// returned even when one is expected during full validation.
+		if err != nil {
+			scenario.CheckError(t, err)
+		}
+
 		assertionInfo, err := scenario.ServiceProvider.RetrieveAssertionInfo(scenario.Response)
 		if scenario.CheckError != nil {
 			scenario.CheckError(t, err)

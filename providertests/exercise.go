@@ -5,12 +5,22 @@ package providertests
 import (
 	"testing"
 
+	saml2 "github.com/russellhaering/gosaml2"
 	"github.com/stretchr/testify/require"
 )
 
 func ExerciseProviderTestScenarios(t *testing.T, scenarios []ProviderTestScenario) {
+	println("TESTING")
 	for _, scenario := range scenarios {
 		t.Run(scenario.ScenarioName, func(t *testing.T) {
+			_, err := saml2.DecodeUnverifiedBaseResponse(scenario.Response)
+			// DecodeUnverifiedBaseResponse is more permissive than RetrieveAssertionInfo.
+			// If an error _is_ returned it should match, but it is OK for no error to be
+			// returned even when one is expected during full validation.
+			if err != nil {
+				scenario.CheckError(t, err)
+			}
+
 			assertionInfo, err := scenario.ServiceProvider.RetrieveAssertionInfo(scenario.Response)
 			if scenario.CheckError != nil {
 				scenario.CheckError(t, err)

@@ -277,22 +277,55 @@ func (sp *SAMLServiceProvider) ValidateEncodedResponse(encodedResponse string) (
 	return decodedResponse, nil
 }
 
-// parseResponse is a helper function that was refactored out so that the XML parsing behavior can be isolated and unit tested
-func parseResponse(xml []byte) (*etree.Document, *etree.Element, error) {
-	doc := etree.NewDocument()
-	err := doc.ReadFromBytes(xml)
+// DecodeUnverifiedBaseResponse decodes several attributes from a SAML response for the purpose
+// of determining how to validate the response. This is useful for Service Providers which
+// expose a single Assertion Consumer Service URL but consume Responses from many IdPs.
+func DecodeUnverifiedBaseResponse(encodedResponse string) (*types.UnverifiedBaseResponse, error) {
+	raw, err := base64.StdEncoding.DecodeString(encodedResponse)
 	if err != nil {
-		// Attempt to inflate the response in case it happens to be compressed (as with one case at saml.oktadev.com)
-		buf, err := ioutil.ReadAll(flate.NewReader(bytes.NewReader(xml)))
+		return nil, err
+	}
+
+	var response *types.UnverifiedBaseResponse
+
+	err = maybeDeflate(raw, func(maybeXML []byte) error {
+		response = &types.UnverifiedBaseResponse{}
+		return xml.Unmarshal(maybeXML, response)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
+}
+
+// maybeDeflate invokes the passed decoder over the passed data. If an error is
+// returned, it then attempts to deflate the passed data before re-invoking
+// the decoder over the deflated data.
+func maybeDeflate(data []byte, decoder func([]byte) error) error {
+	err := decoder(data)
+	if err != nil {
+		deflated, err := ioutil.ReadAll(flate.NewReader(bytes.NewReader(data)))
 		if err != nil {
-			return nil, nil, err
+			return err
 		}
 
+		return decoder(deflated)
+	}
+
+	return nil
+}
+
+// parseResponse is a helper function that was refactored out so that the XML parsing behavior can be isolated and unit tested
+func parseResponse(xml []byte) (*etree.Document, *etree.Element, error) {
+	var doc *etree.Document
+
+	err := maybeDeflate(xml, func(xml []byte) error {
 		doc = etree.NewDocument()
-		err = doc.ReadFromBytes(buf)
-		if err != nil {
-			return nil, nil, err
-		}
+		return doc.ReadFromBytes(xml)
+	})
+	if err != nil {
+		return nil, nil, err
 	}
 
 	el := doc.Root()

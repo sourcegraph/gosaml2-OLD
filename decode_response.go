@@ -304,16 +304,16 @@ func DecodeUnverifiedBaseResponse(encodedResponse string) (*types.UnverifiedBase
 // the decoder over the deflated data.
 func maybeDeflate(data []byte, decoder func([]byte) error) error {
 	err := decoder(data)
-	if err != nil {
-		deflated, err := ioutil.ReadAll(flate.NewReader(bytes.NewReader(data)))
-		if err != nil {
-			return err
-		}
-
-		return decoder(deflated)
+	if err == nil {
+		return nil
 	}
 
-	return nil
+	deflated, err := ioutil.ReadAll(flate.NewReader(bytes.NewReader(data)))
+	if err != nil {
+		return err
+	}
+
+	return decoder(deflated)
 }
 
 // parseResponse is a helper function that was refactored out so that the XML parsing behavior can be isolated and unit tested

@@ -10,7 +10,6 @@ import (
 )
 
 func ExerciseProviderTestScenarios(t *testing.T, scenarios []ProviderTestScenario) {
-	println("TESTING")
 	for _, scenario := range scenarios {
 		t.Run(scenario.ScenarioName, func(t *testing.T) {
 			_, err := saml2.DecodeUnverifiedBaseResponse(scenario.Response)

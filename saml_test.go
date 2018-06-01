@@ -128,12 +128,37 @@ func TestSAML(t *testing.T) {
 		IdentityProviderSSOURL:      "https://dev-116807.oktapreview.com/app/scaleftdev116807_scaleft_1/exk5zt0r12Edi4rD20h7/sso/saml",
 		IdentityProviderIssuer:      "http://www.okta.com/exk5zt0r12Edi4rD20h7",
 		AssertionConsumerServiceURL: "http://localhost:8080/v1/_saml_callback",
-		SignAuthnRequests:           true,
 		AudienceURI:                 "123",
 		IDPCertificateStore:         &certStore,
-		SPKeyStore:                  randomKeyStore,
 		NameIdFormat:                NameIdFormatPersistent,
 	}
+
+	t.Run("without SP signing", func(t *testing.T) {
+		testSAMLWithoutSPSigning(t, sp)
+	})
+	t.Run("with SP signing", func(t *testing.T) {
+		testSAMLWithSPSigning(t, sp, randomKeyStore)
+	})
+}
+
+func testSAMLWithoutSPSigning(t *testing.T, sp *SAMLServiceProvider) {
+	_, err := sp.Metadata()
+	require.NoError(t, err)
+
+	authRequestString, err := sp.BuildAuthRequest()
+	require.NoError(t, err)
+	require.NotEmpty(t, authRequestString)
+}
+
+func testSAMLWithSPSigning(t *testing.T, sp *SAMLServiceProvider, randomKeyStore dsig.X509KeyStore) {
+	tmp := *sp
+	sp = &tmp
+
+	sp.SignAuthnRequests = true
+	sp.SPKeyStore = randomKeyStore
+
+	_, err := sp.Metadata()
+	require.NoError(t, err)
 
 	authRequestURL, err := sp.BuildAuthURL("/some/link/here")
 	require.NoError(t, err)

@@ -61,7 +61,8 @@ func main() {
 
 	sp := &saml2.SAMLServiceProvider{
 		IdentityProviderSSOURL:      metadata.IDPSSODescriptor.SingleSignOnServices[0].Location,
-		IdentityProviderIssuer:      "http://example.com/saml/acs/example",
+		IdentityProviderIssuer:      metadata.EntityID,
+		ServiceProviderIssuer:       "http://example.com/saml/acs/example",
 		AssertionConsumerServiceURL: "http://localhost:8080/v1/_saml_callback",
 		SignAuthnRequests:           true,
 		AudienceURI:                 "http://example.com/saml/acs/example",

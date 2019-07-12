@@ -39,8 +39,9 @@ type DigestMethod struct {
 
 //Well-known public-key encryption methods
 const (
-	MethodRSAOAEP  = "http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p"
-	MethodRSAOAEP2 = "http://www.w3.org/2009/xmlenc11#rsa-oaep"
+	MethodRSAOAEP   = "http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p"
+	MethodRSAOAEP2  = "http://www.w3.org/2009/xmlenc11#rsa-oaep"
+	MethodRSAPKCS15 = "http://www.w3.org/2001/04/xmlenc#rsa-1_5"
 )
 
 //Well-known private key encryption methods
@@ -122,6 +123,18 @@ func (ek *EncryptedKey) DecryptSymmetricKey(cert *tls.Certificate) (cipher.Block
 			return nil, fmt.Errorf("missing encryption algorithm")
 		case MethodRSAOAEP, MethodRSAOAEP2:
 			pt, err := rsa.DecryptOAEP(h, rand.Reader, pk, cipherText, nil)
+			if err != nil {
+				return nil, fmt.Errorf("rsa internal error: %v", err)
+			}
+
+			b, err := aes.NewCipher(pt)
+			if err != nil {
+				return nil, err
+			}
+
+			return b, nil
+		case MethodRSAPKCS15:
+			pt, err := rsa.DecryptPKCS1v15(rand.Reader, pk, cipherText)
 			if err != nil {
 				return nil, fmt.Errorf("rsa internal error: %v", err)
 			}
